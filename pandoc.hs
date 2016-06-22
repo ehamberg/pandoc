@@ -34,9 +34,8 @@ import Text.Pandoc
 import Text.Pandoc.Builder (setMeta)
 import Text.Pandoc.Walk (walk)
 import Text.Pandoc.Readers.LaTeX (handleIncludes)
-import Text.Pandoc.Shared ( tabFilter, readDataFileUTF8, readDataFile,
-                            safeRead, headerShift, normalize, err, warn,
-                            openURL )
+import Text.Pandoc.Shared ( tabFilter, safeRead, headerShift, normalize, err,
+                            warn, openURL )
 import Text.Pandoc.MediaBag ( mediaDirectory, extractMediaBag, MediaBag )
 import Text.Pandoc.XML ( toEntities )
 import Text.Pandoc.SelfContained ( makeSelfContained )
@@ -61,15 +60,12 @@ import Data.Maybe (fromMaybe, isNothing, isJust)
 import Data.Foldable (foldrM)
 import Network.URI (parseURI, isURI, URI(..))
 import qualified Data.ByteString.Lazy as B
-import qualified Data.ByteString as BS
 import Data.Aeson (eitherDecode', encode)
 import qualified Data.Map as M
 import Data.Yaml (decode)
 import qualified Data.Yaml as Yaml
 import qualified Data.Text as T
 import Control.Applicative ((<|>))
-import Paths_pandoc (getDataDir)
-import Text.Printf (printf)
 import Text.Pandoc.Error
 
 type Transform = Pandoc -> Pandoc
@@ -432,14 +428,6 @@ options =
                      return opt{ optVariables = (key,val) : optVariables opt })
                   "KEY[:VALUE]")
                  ""
-
-    , Option "" ["print-default-data-file"]
-                 (ReqArg
-                  (\arg _ -> do
-                     readDataFile Nothing arg >>= BS.hPutStr stdout
-                     exitSuccess)
-                  "FILE")
-                  "" -- "Print default data file"
 
     , Option "" ["dpi"]
                  (ReqArg
@@ -868,22 +856,6 @@ options =
                   (\opt -> return opt { optVerbose = True }))
                  "" -- "Verbose diagnostic output."
 
-    , Option "" ["bash-completion"]
-                 (NoArg
-                  (\_ -> do
-                     ddir <- getDataDir
-                     tpl <- readDataFileUTF8 Nothing "bash_completion.tpl"
-                     let optnames (Option shorts longs _ _) =
-                           map (\c -> ['-',c]) shorts ++
-                           map ("--" ++) longs
-                     let allopts = unwords (concatMap optnames options)
-                     UTF8.hPutStrLn stdout $ printf tpl allopts
-                         (unwords (map fst readers))
-                         (unwords ("pdf": map fst writers))
-                         ddir
-                     exitSuccess ))
-                 "" -- "Print bash completion script"
-
     , Option "v" ["version"]
                  (NoArg
                   (\_ -> do
@@ -1195,26 +1167,6 @@ convertWithOpts opts args = do
 
   let templ = ""
 
-  variables' <- case mathMethod of
-                      LaTeXMathML Nothing -> do
-                         s <- readDataFileUTF8 datadir "LaTeXMathML.js"
-                         return $ ("mathml-script", s) : variables
-                      MathML Nothing -> do
-                         s <- readDataFileUTF8 datadir "MathMLinHTML.js"
-                         return $ ("mathml-script", s) : variables
-                      _ -> return variables
-
-  variables'' <- if format == "dzslides"
-                    then do
-                        dztempl <- readDataFileUTF8 datadir
-                                     ("dzslides" </> "template.html")
-                        let dzline = "<!-- {{{{ dzslides core"
-                        let dzcore = unlines
-                                   $ dropWhile (not . (dzline `isPrefixOf`))
-                                   $ lines dztempl
-                        return $ ("dzslides-core", dzcore) : variables'
-                    else return variables'
-
   let sourceURL = case sources of
                     []    -> Nothing
                     (x:_) -> case parseURI x of
@@ -1294,7 +1246,7 @@ convertWithOpts opts args = do
 
   let writerOptions = def { writerStandalone       = standalone',
                             writerTemplate         = templ,
-                            writerVariables        = variables'',
+                            writerVariables        = variables,
                             writerTabStop          = tabStop,
                             writerTableOfContents  = toc,
                             writerHTMLMathMethod   = mathMethod,
