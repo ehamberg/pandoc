@@ -40,8 +40,6 @@ import System.FilePath
 import System.Console.GetOpt
 import Data.Char ( toLower, toUpper )
 import Data.List ( delete, intercalate, isPrefixOf, sort )
-import System.Directory ( getAppUserDataDirectory, findExecutable,
-                          doesFileExist, Permissions(..), getPermissions )
 import qualified Control.Exception as E
 import Control.Exception.Extensible ( throwIO )
 import qualified Text.Pandoc.UTF8 as UTF8
@@ -136,7 +134,6 @@ data Opt = Opt
     , optEmailObfuscation  :: ObfuscationMethod
     , optIdentifierPrefix  :: String
     , optIndentedCodeClasses :: [String] -- ^ Default classes for indented code blocks
-    , optDataDir           :: Maybe FilePath
     , optCiteMethod        :: CiteMethod -- ^ Method to output cites
     , optListings          :: Bool       -- ^ Use listings package for code blocks
     , optLaTeXEngine       :: String     -- ^ Program to use for latex -> pdf
@@ -200,7 +197,6 @@ defaultOpts = Opt
     , optEmailObfuscation      = JavascriptObfuscation
     , optIdentifierPrefix      = ""
     , optIndentedCodeClasses   = []
-    , optDataDir               = Nothing
     , optCiteMethod            = Citeproc
     , optListings              = False
     , optLaTeXEngine           = "pdflatex"
@@ -239,12 +235,6 @@ options =
                   (\arg opt -> return opt { optOutputFile = arg })
                   "FILENAME")
                  "" -- "Name of output file"
-
-    , Option "" ["data-dir"]
-                 (ReqArg
-                  (\arg opt -> return opt { optDataDir = Just arg })
-                 "DIRECTORY") -- "Directory containing pandoc data files."
-                ""
 
     , Option "R" ["parse-raw"]
                  (NoArg
@@ -765,26 +755,6 @@ options =
                  (NoArg
                   (\opt -> return opt { optVerbose = True }))
                  "" -- "Verbose diagnostic output."
-
-    , Option "v" ["version"]
-                 (NoArg
-                  (\_ -> do
-                     prg <- getProgName
-                     defaultDatadir <- getAppUserDataDirectory "pandoc"
-                     UTF8.hPutStrLn stdout (prg ++ " " ++ pandocVersion ++
-                       compileInfo ++ "\nDefault user data directory: " ++
-                       defaultDatadir ++ copyrightMessage)
-                     exitSuccess ))
-                 "" -- "Print version"
-
-    , Option "h" ["help"]
-                 (NoArg
-                  (\_ -> do
-                     prg <- getProgName
-                     UTF8.hPutStr stdout (usageMessage prg options)
-                     exitSuccess ))
-                 "" -- "Show help"
-
     ]
 
 
@@ -968,7 +938,6 @@ convertWithOpts opts args = do
               , optEmailObfuscation      = obfuscationMethod
               , optIdentifierPrefix      = idPrefix
               , optIndentedCodeClasses   = codeBlockClasses
-              , optDataDir               = mbDataDir
               , optCiteMethod            = citeMethod
               , optListings              = listings
               , optLaTeXEngine           = latexEngine
@@ -985,11 +954,6 @@ convertWithOpts opts args = do
               , optKaTeXJS               = katexJS
              } = opts
 
-  when dumpArgs $
-    do UTF8.hPutStrLn stdout outputFile
-       mapM_ (UTF8.hPutStrLn stdout) args
-       exitSuccess
-
   let csscdn = "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.5.1/katex.min.css"
   let mathMethod =
         case (katexJS, katexStylesheet) of
@@ -1005,13 +969,6 @@ convertWithOpts opts args = do
                                   else filters
 
   let sources = if ignoreArgs then [] else args
-
-  datadir <- case mbDataDir of
-                  Nothing   -> E.catch
-                                 (Just <$> getAppUserDataDirectory "pandoc")
-                                 (\e -> let _ = (e :: E.SomeException)
-                                        in  return Nothing)
-                  Just _    -> return mbDataDir
 
   -- assign reader and writer based on options and filenames
   let readerName' = case map toLower readerName of
@@ -1147,7 +1104,6 @@ convertWithOpts opts args = do
                             writerEmailObfuscation = obfuscationMethod,
                             writerIdentifierPrefix = idPrefix,
                             writerSourceURL        = sourceURL,
-                            writerUserDataDir      = datadir,
                             writerHtml5            = html5,
                             writerHtmlQTags        = htmlQTags,
                             writerChapters         = chapters,
