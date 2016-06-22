@@ -69,7 +69,6 @@ import Data.Yaml (decode)
 import qualified Data.Yaml as Yaml
 import qualified Data.Text as T
 import Control.Applicative ((<|>))
-import Text.Pandoc.Readers.Txt2Tags (getT2TMeta)
 import Paths_pandoc (getDataDir)
 import Text.Printf (printf)
 import Text.Pandoc.Error
@@ -1197,11 +1196,7 @@ convertWithOpts opts args = do
                               else e
                          Right w -> return w
 
-  reader <- if "t2t" == readerName'
-              then (mkStringReader .
-                    readTxt2Tags) <$>
-                      getT2TMeta sources outputFile
-              else case getReader readerName' of
+  reader <- case getReader readerName' of
                 Right r  -> return r
                 Left e   -> err 7 e'
                   where e' = case readerName' of

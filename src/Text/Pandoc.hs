@@ -66,25 +66,8 @@ module Text.Pandoc
                -- * Readers: converting /to/ Pandoc format
                , Reader (..)
                , mkStringReader
-               , readDocx
-               , readOdt
                , readMarkdown
-               , readCommonMark
-               , readMediaWiki
-               , readRST
-               , readOrg
-               , readLaTeX
                , readHtml
-               , readTextile
-               , readDocBook
-               , readOPML
-               , readHaddock
-               , readNative
-               , readJSON
-               , readTWiki
-               , readTxt2Tags
-               , readTxt2TagsNoMacros
-               , readEPUB
                -- * Writers: converting /from/ Pandoc format
               , Writer (..)
                , writeNative
@@ -107,7 +90,6 @@ module Text.Pandoc
                , writeTextile
                , writeRTF
                , writeODT
-               , writeDocx
                , writeEPUB
                , writeFB2
                , writeOrg
@@ -128,23 +110,9 @@ module Text.Pandoc
 import Text.Pandoc.Definition
 import Text.Pandoc.Generic
 import Text.Pandoc.JSON
-import Text.Pandoc.Readers.Markdown
-import Text.Pandoc.Readers.CommonMark
-import Text.Pandoc.Readers.MediaWiki
-import Text.Pandoc.Readers.RST
-import Text.Pandoc.Readers.Org
-import Text.Pandoc.Readers.DocBook
-import Text.Pandoc.Readers.OPML
-import Text.Pandoc.Readers.LaTeX
 import Text.Pandoc.Readers.HTML
-import Text.Pandoc.Readers.Textile
-import Text.Pandoc.Readers.Native
-import Text.Pandoc.Readers.Haddock
-import Text.Pandoc.Readers.TWiki
-import Text.Pandoc.Readers.Docx
-import Text.Pandoc.Readers.Odt
-import Text.Pandoc.Readers.Txt2Tags
-import Text.Pandoc.Readers.EPUB
+import Text.Pandoc.Readers.LaTeX
+import Text.Pandoc.Readers.Markdown
 import Text.Pandoc.Writers.Native
 import Text.Pandoc.Writers.Markdown
 import Text.Pandoc.Writers.RST
@@ -153,7 +121,6 @@ import Text.Pandoc.Writers.ConTeXt
 import Text.Pandoc.Writers.Texinfo
 import Text.Pandoc.Writers.HTML
 import Text.Pandoc.Writers.ODT
-import Text.Pandoc.Writers.Docx
 import Text.Pandoc.Writers.EPUB
 import Text.Pandoc.Writers.FB2
 import Text.Pandoc.Writers.ICML
@@ -233,28 +200,12 @@ mkBSReaderWithWarnings r = ByteStringReader $ \o s ->
 
 -- | Association list of formats and readers.
 readers :: [(String, Reader)]
-readers = [ ("native"       , StringReader $ \_ s -> return $ readNative s)
-           ,("json"         , mkStringReader readJSON )
-           ,("markdown"     , mkStringReaderWithWarnings readMarkdownWithWarnings)
+readers = [ ("markdown"     , mkStringReaderWithWarnings readMarkdownWithWarnings)
            ,("markdown_strict" , mkStringReaderWithWarnings readMarkdownWithWarnings)
            ,("markdown_phpextra" , mkStringReaderWithWarnings readMarkdownWithWarnings)
            ,("markdown_github" , mkStringReaderWithWarnings readMarkdownWithWarnings)
            ,("markdown_mmd",  mkStringReaderWithWarnings readMarkdownWithWarnings)
-           ,("commonmark"   , mkStringReader readCommonMark)
-           ,("rst"          , mkStringReaderWithWarnings readRSTWithWarnings )
-           ,("mediawiki"    , mkStringReader readMediaWiki)
-           ,("docbook"      , mkStringReader readDocBook)
-           ,("opml"         , mkStringReader readOPML)
-           ,("org"          , mkStringReader readOrg)
-           ,("textile"      , mkStringReader readTextile) -- TODO : textile+lhs
-           ,("html"         , mkStringReader readHtml)
            ,("latex"        , mkStringReader readLaTeX)
-           ,("haddock"      , mkStringReader readHaddock)
-           ,("twiki"        , mkStringReader readTWiki)
-           ,("docx"         , mkBSReaderWithWarnings readDocxWithWarnings)
-           ,("odt"          , mkBSReader readOdt)
-           ,("t2t"          , mkStringReader readTxt2TagsNoMacros)
-           ,("epub"         , mkBSReader readEPUB)
            ]
 
 data Writer = PureStringWriter   (WriterOptions -> Pandoc -> String)
@@ -266,7 +217,6 @@ writers :: [ ( String, Writer ) ]
 writers = [
    ("native"       , PureStringWriter writeNative)
   ,("json"         , PureStringWriter writeJSON)
-  ,("docx"         , IOByteStringWriter writeDocx)
   ,("odt"          , IOByteStringWriter writeODT)
   ,("epub"         , IOByteStringWriter $ \o ->
                       writeEPUB o{ writerEpubVersion = Just EPUB2 })
