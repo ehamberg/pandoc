@@ -35,75 +35,6 @@ Description:     Pandoc is a Haskell library for converting from one markup
                  format. Thus, adding an input or output format requires
                  only adding a reader or writer.
 Data-Files:
-                 -- templates
-                 data/templates/default.html
-                 data/templates/default.html5
-                 data/templates/default.docbook
-                 data/templates/default.docbook5
-                 data/templates/default.tei
-                 data/templates/default.beamer
-                 data/templates/default.opendocument
-                 data/templates/default.icml
-                 data/templates/default.opml
-                 data/templates/default.latex
-                 data/templates/default.context
-                 data/templates/default.texinfo
-                 data/templates/default.man
-                 data/templates/default.markdown
-                 data/templates/default.commonmark
-                 data/templates/default.rst
-                 data/templates/default.plain
-                 data/templates/default.mediawiki
-                 data/templates/default.dokuwiki
-                 data/templates/default.rtf
-                 data/templates/default.s5
-                 data/templates/default.slidy
-                 data/templates/default.slideous
-                 data/templates/default.revealjs
-                 data/templates/default.dzslides
-                 data/templates/default.asciidoc
-                 data/templates/default.haddock
-                 data/templates/default.textile
-                 data/templates/default.org
-                 data/templates/default.epub
-                 data/templates/default.epub3
-                 -- source files for reference.docx
-                 data/docx/[Content_Types].xml
-                 data/docx/_rels/.rels
-                 data/docx/docProps/app.xml
-                 data/docx/docProps/core.xml
-                 data/docx/word/document.xml
-                 data/docx/word/fontTable.xml
-                 data/docx/word/footnotes.xml
-                 data/docx/word/numbering.xml
-                 data/docx/word/settings.xml
-                 data/docx/word/webSettings.xml
-                 data/docx/word/styles.xml
-                 data/docx/word/_rels/document.xml.rels
-                 data/docx/word/_rels/footnotes.xml.rels
-                 data/docx/word/theme/theme1.xml
-                 -- source files for reference.odt
-                 data/odt/mimetype
-                 data/odt/manifest.rdf
-                 data/odt/styles.xml
-                 data/odt/content.xml
-                 data/odt/meta.xml
-                 data/odt/settings.xml
-                 data/odt/Configurations2/accelerator/current.xml
-                 data/odt/Thumbnails/thumbnail.png
-                 data/odt/META-INF/manifest.xml
-                  -- stylesheet for EPUB writer
-                 data/epub.css
-                 -- data for LaTeXMathML writer
-                 data/LaTeXMathML.js
-                 data/MathMLinHTML.js
-                 -- data for dzslides writer
-                 data/dzslides/template.html
-                 -- sample lua custom writer
-                 data/sample.lua
-                 -- bash completion template
-                 data/bash_completion.tpl
-                 -- documentation
                  README, COPYRIGHT
 Extra-Source-Files:
                  -- documentation
@@ -265,7 +196,6 @@ Library
                  random >= 1 && < 1.2,
                  extensible-exceptions >= 0.1 && < 0.2,
                  pandoc-types >= 1.16 && < 1.17,
-                 aeson >= 0.7 && < 0.12,
                  tagsoup >= 0.13.7 && < 0.14,
                  base64-bytestring >= 0.1 && < 1.1,
                  zlib >= 0.5 && < 0.7,
@@ -330,9 +260,7 @@ Library
                    Text.Pandoc.Readers.Markdown,
                    Text.Pandoc.Readers.TeXMath,
                    Text.Pandoc.Writers.HTML,
-                   Text.Pandoc.PDF,
                    Text.Pandoc.UTF8,
-                   Text.Pandoc.Templates,
                    Text.Pandoc.XML,
                    Text.Pandoc.SelfContained,
                    Text.Pandoc.Process,

@@ -32,7 +32,6 @@ writers.
 module Main where
 import Text.Pandoc
 import Text.Pandoc.Builder (setMeta)
-import Text.Pandoc.PDF (makePDF)
 import Text.Pandoc.Walk (walk)
 import Text.Pandoc.Readers.LaTeX (handleIncludes)
 import Text.Pandoc.Shared ( tabFilter, readDataFileUTF8, readDataFile,
@@ -433,17 +432,6 @@ options =
                      return opt{ optVariables = (key,val) : optVariables opt })
                   "KEY[:VALUE]")
                  ""
-
-    , Option "D" ["print-default-template"]
-                 (ReqArg
-                  (\arg _ -> do
-                     templ <- getDefaultTemplate Nothing arg
-                     case templ of
-                          Right t -> UTF8.hPutStr stdout t
-                          Left e  -> error $ show e
-                     exitSuccess)
-                  "FORMAT")
-                 "" -- "Print default template for FORMAT"
 
     , Option "" ["print-default-data-file"]
                  (ReqArg
@@ -1205,26 +1193,7 @@ convertWithOpts opts args = do
 
   let standalone' = standalone || not (isTextFormat format) || pdfOutput
 
-  templ <- case templatePath of
-                _ | not standalone' -> return ""
-                Nothing -> do
-                           deftemp <- getDefaultTemplate datadir format
-                           case deftemp of
-                                 Left e   -> throwIO e
-                                 Right t  -> return t
-                Just tp -> do
-                           -- strip off extensions
-                           let tp' = case takeExtension tp of
-                                          ""   -> tp <.> format
-                                          _    -> tp
-                           E.catch (UTF8.readFile tp')
-                             (\e -> if isDoesNotExistError e
-                                       then E.catch
-                                             (readDataFileUTF8 datadir
-                                                ("templates" </> tp'))
-                                             (\e' -> let _ = (e' :: E.SomeException)
-                                                     in throwIO e')
-                                       else throwIO e)
+  let templ = ""
 
   variables' <- case mathMethod of
                       LaTeXMathML Nothing -> do
@@ -1382,29 +1351,6 @@ convertWithOpts opts args = do
     IOStringWriter f -> f writerOptions doc' >>= writerFn outputFile
     IOByteStringWriter f -> f writerOptions doc' >>= writeBinary
     PureStringWriter f
-      | pdfOutput -> do
-              -- make sure writer is latex or beamer or context or html5
-              unless (laTeXOutput || conTeXtOutput || html5Output) $
-                err 47 $ "cannot produce pdf output with " ++ format ++
-                         " writer"
-
-              let pdfprog = case () of
-                              _ | conTeXtOutput -> "context"
-                              _ | html5Output   -> "wkhtmltopdf"
-                              _                 -> latexEngine
-              -- check for pdf creating program
-              mbPdfProg <- findExecutable pdfprog
-              when (isNothing mbPdfProg) $
-                   err 41 $ pdfprog ++ " not found. " ++
-                     pdfprog ++ " is needed for pdf output."
-
-              res <- makePDF pdfprog f writerOptions doc'
-              case res of
-                   Right pdf -> writeBinary pdf
-                   Left err' -> do
-                     B.hPutStr stderr err'
-                     B.hPut stderr $ B.pack [10]
-                     err 43 "Error producing PDF"
       | otherwise -> selfcontain (f writerOptions doc' ++
                                   ['\n' | not standalone'])
                       >>= writerFn outputFile . handleEntities

@@ -36,7 +36,6 @@ import Text.Pandoc.Shared
 import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Options
 import Text.Pandoc.ImageSize
-import Text.Pandoc.Templates
 import Text.Pandoc.Readers.TeXMath
 import Text.Pandoc.Slides
 import Text.Pandoc.Highlighting ( highlight, styleToCss,
@@ -68,7 +67,6 @@ import Text.XML.Light.Output
 import Text.XML.Light (unode, elChildren, unqual)
 import qualified Text.XML.Light as XML
 import System.FilePath (takeExtension)
-import Data.Aeson (Value)
 
 data WriterState = WriterState
     { stNotes            :: [Html]  -- ^ List of notes
@@ -102,31 +100,20 @@ nl opts = if writerWrapText opts == WrapNone
 -- | Convert Pandoc document to Html string.
 writeHtmlString :: WriterOptions -> Pandoc -> String
 writeHtmlString opts d =
-  let (body, context) = evalState (pandocToHtml opts d) defaultWriterState
-  in  if writerStandalone opts
-         then inTemplate opts context body
-         else renderHtml body
+  let body = evalState (pandocToHtml opts d) defaultWriterState
+  in renderHtml body
 
 -- | Convert Pandoc document to Html structure.
 writeHtml :: WriterOptions -> Pandoc -> Html
 writeHtml opts d =
-  let (body, context) = evalState (pandocToHtml opts d) defaultWriterState
-  in  if writerStandalone opts
-         then inTemplate opts context body
-         else body
+  let body = evalState (pandocToHtml opts d) defaultWriterState
+  in body
 
 -- result is (title, authors, date, toc, body, new variables)
 pandocToHtml :: WriterOptions
              -> Pandoc
-             -> State WriterState (Html, Value)
+             -> State WriterState Html
 pandocToHtml opts (Pandoc meta blocks) = do
-  metadata <- metaToJSON opts
-              (fmap renderHtml . blockListToHtml opts)
-              (fmap renderHtml . inlineListToHtml opts)
-              meta
-  let stringifyHTML = escapeStringForXML . stringify
-  let authsMeta = map stringifyHTML $ docAuthors meta
-  let dateMeta  = stringifyHTML $ docDate meta
   let slideLevel = fromMaybe (getSlideLevel blocks) $ writerSlideLevel opts
   let sects = hierarchicalize $
               if writerSlideVariant opts == NoSlides
@@ -140,68 +127,7 @@ pandocToHtml opts (Pandoc meta blocks) = do
   st <- get
   let notes = reverse (stNotes st)
   let thebody = blocks' >> footnoteSection opts notes
-  let  math = case writerHTMLMathMethod opts of
-                      LaTeXMathML (Just url) ->
-                         H.script ! A.src (toValue url)
-                                  ! A.type_ "text/javascript"
-                                  $ mempty
-                      MathML (Just url) ->
-                         H.script ! A.src (toValue url)
-                                  ! A.type_ "text/javascript"
-                                  $ mempty
-                      MathJax url ->
-                         H.script ! A.src (toValue url)
-                                  ! A.type_ "text/javascript"
-                                  $ case writerSlideVariant opts of
-                                         SlideousSlides ->
-                                            preEscapedString
-                                            "MathJax.Hub.Queue([\"Typeset\",MathJax.Hub]);"
-                                         _ -> mempty
-                      JsMath (Just url) ->
-                         H.script ! A.src (toValue url)
-                                  ! A.type_ "text/javascript"
-                                  $ mempty
-                      KaTeX js css ->
-                         (H.script ! A.src (toValue js) $ mempty) <>
-                         (H.link ! A.rel "stylesheet" ! A.href (toValue css)) <>
-                         (H.script ! A.type_ "text/javascript" $ toHtml renderKaTeX)
-                      _ -> case lookup "mathml-script" (writerVariables opts) of
-                                 Just s | not (writerHtml5 opts) ->
-                                   H.script ! A.type_ "text/javascript"
-                                      $ preEscapedString
-                                       ("/*<![CDATA[*/\n" ++ s ++ "/*]]>*/\n")
-                                        | otherwise -> mempty
-                                 Nothing -> mempty
-  let context =   (if stHighlighting st
-                      then defField "highlighting-css"
-                             (styleToCss $ writerHighlightStyle opts)
-                      else id) $
-                  (if stMath st
-                      then defField "math" (renderHtml math)
-                      else id) $
-                  defField "quotes" (stQuotes st) $
-                  maybe id (defField "toc" . renderHtml) toc $
-                  defField "author-meta" authsMeta $
-                  maybe id (defField "date-meta") (normalizeDate dateMeta) $
-                  defField "pagetitle" (stringifyHTML $ docTitle meta) $
-                  defField "idprefix" (writerIdentifierPrefix opts) $
-                  -- these should maybe be set in pandoc.hs
-                  defField "slidy-url"
-                    ("http://www.w3.org/Talks/Tools/Slidy2" :: String) $
-                  defField "slideous-url" ("slideous" :: String) $
-                  defField "revealjs-url" ("reveal.js" :: String) $
-                  defField "s5-url" ("s5/default" :: String) $
-                  defField "html5" (writerHtml5 opts) $
-                  metadata
-  return (thebody, context)
-
-inTemplate :: TemplateTarget a
-           => WriterOptions
-           -> Value
-           -> Html
-           -> a
-inTemplate opts context body = renderTemplate' (writerTemplate opts)
-                             $ defField "body" (renderHtml body) context
+  return thebody
 
 -- | Like Text.XHtml's identifier, but adds the writerIdentifierPrefix
 prefixedId :: WriterOptions -> String -> Attribute
@@ -809,7 +735,7 @@ inlineToHtml opts inline =
               let brtag = if writerHtml5 opts then H5.br else H.br
               return  $ case t of
                          InlineMath  -> m
-                         DisplayMath -> brtag >> m >> brtag 
+                         DisplayMath -> brtag >> m >> brtag
     (RawInline f str)
       | f == Format "latex" ->
                           case writerHTMLMathMethod opts of

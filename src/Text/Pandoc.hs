@@ -72,8 +72,6 @@ module Text.Pandoc
               , Writer (..)
                , writeHtml
                , writeHtmlString
-               -- * Rendering templates and default templates
-               , module Text.Pandoc.Templates
                -- * Miscellaneous
                , getReader
                , getWriter
@@ -86,7 +84,6 @@ import Text.Pandoc.Readers.HTML
 import Text.Pandoc.Readers.LaTeX
 import Text.Pandoc.Readers.Markdown
 import Text.Pandoc.Writers.HTML
-import Text.Pandoc.Templates
 import Text.Pandoc.Options
 import Text.Pandoc.Shared (safeRead, warn, pandocVersion)
 import Text.Pandoc.MediaBag (MediaBag)
