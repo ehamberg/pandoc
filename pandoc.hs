@@ -32,30 +32,23 @@ writers.
 module Main where
 import Text.Pandoc
 import Text.Pandoc.Builder (setMeta)
-import Text.Pandoc.Walk (walk)
 import Text.Pandoc.Shared ( tabFilter, safeRead, headerShift, normalize, err,
                             warn )
 import Text.Pandoc.XML ( toEntities )
-import Text.Pandoc.Process (pipeProcess)
 import System.Environment ( getArgs, getProgName )
-import System.Exit ( ExitCode (..), exitSuccess )
 import System.FilePath
 import System.Console.GetOpt
 import Data.Char ( toLower, toUpper )
 import Data.List ( delete, intercalate, isPrefixOf, sort )
 import System.Directory ( getAppUserDataDirectory, findExecutable,
                           doesFileExist, Permissions(..), getPermissions )
-import System.IO ( stdout, stderr )
-import System.IO.Error ( isDoesNotExistError )
 import qualified Control.Exception as E
 import Control.Exception.Extensible ( throwIO )
 import qualified Text.Pandoc.UTF8 as UTF8
-import Control.Monad (when, unless, (>=>))
+import Control.Monad (when, unless)
 import Data.Maybe (fromMaybe, isNothing, isJust)
-import Data.Foldable (foldrM)
 import Network.URI (parseURI, isURI, URI(..))
 import qualified Data.ByteString.Lazy as B
-import Data.Aeson (eitherDecode', encode)
 import qualified Data.Map as M
 import Data.Yaml (decode)
 import qualified Data.Yaml as Yaml
@@ -97,50 +90,6 @@ wrapWords indent c = wrap' (c - indent) (c - indent)
 isTextFormat :: String -> Bool
 isTextFormat s = s `notElem` ["odt","docx","epub","epub3"]
 
-externalFilter :: FilePath -> [String] -> Pandoc -> IO Pandoc
-externalFilter f args' d = do
-      mbexe <- if '/' `elem` f
-                  -- don't check PATH if filter name has a path
-                  then return Nothing
-                  -- we catch isDoesNotExistError because this will
-                  -- be triggered if PATH not set:
-                  else E.catch (findExecutable f)
-                                 (\e -> if isDoesNotExistError e
-                                           then return Nothing
-                                           else throwIO e)
-      (f', args'') <- case mbexe of
-                           Just x  -> return (x, args')
-                           Nothing -> do
-                             exists <- doesFileExist f
-                             if exists
-                                then do
-                                  isExecutable <- executable `fmap`
-                                                    getPermissions f
-                                  return $
-                                    case map toLower $ takeExtension f of
-                                         _ | isExecutable -> (f, args')
-                                         ".py"  -> ("python", f:args')
-                                         ".hs"  -> ("runhaskell", f:args')
-                                         ".pl"  -> ("perl", f:args')
-                                         ".rb"  -> ("ruby", f:args')
-                                         ".php" -> ("php", f:args')
-                                         _      -> (f, args')
-                                else err 85 $ "Filter " ++ f ++ " not found"
-      when (f' /= f) $ do
-          mbExe <- findExecutable f'
-          when (isNothing mbExe) $
-            err 83 $ "Error running filter " ++ f ++ "\n" ++
-                      show f' ++ " not found in path."
-      (exitcode, outbs, errbs) <- E.handle filterException $
-                                    pipeProcess Nothing f' args'' $ encode d
-      unless (B.null errbs) $ B.hPutStr stderr errbs
-      case exitcode of
-           ExitSuccess    -> return $ either error id $ eitherDecode' outbs
-           ExitFailure ec -> err 83 $ "Error running filter " ++ f ++ "\n" ++
-                                       "Filter returned error status " ++ show ec
- where filterException :: E.SomeException -> IO a
-       filterException e = err 83 $ "Error running filter " ++ f ++ "\n" ++
-                                       show e
 
 -- | Data structure for command line options.
 data Opt = Opt
@@ -953,10 +902,6 @@ adjustMetadata metadata d = return $ M.foldWithKey setMeta d metadata
 
 applyTransforms :: [Transform] -> Pandoc -> IO Pandoc
 applyTransforms transforms d = return $ foldr ($) d transforms
-
-applyFilters :: [FilePath] -> [String] -> Pandoc -> IO Pandoc
-applyFilters filters args d =
-  foldrM ($) d $ map (flip externalFilter args) filters
 
 uppercaseFirstLetter :: String -> String
 uppercaseFirstLetter (c:cs) = toUpper c : cs
