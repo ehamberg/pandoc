@@ -33,14 +33,12 @@ module Text.Pandoc.Writers.HTML ( writeHtml , writeHtmlString ) where
 import Text.Pandoc.Definition
 import Text.Pandoc.Compat.Monoid ((<>))
 import Text.Pandoc.Shared
-import Text.Pandoc.Writers.Shared
 import Text.Pandoc.Options
 import Text.Pandoc.ImageSize
 import Text.Pandoc.Readers.TeXMath
 import Text.Pandoc.Slides
-import Text.Pandoc.Highlighting ( highlight, styleToCss,
-                                  formatHtmlInline, formatHtmlBlock )
-import Text.Pandoc.XML (fromEntities, escapeStringForXML)
+import Text.Pandoc.Highlighting ( highlight, formatHtmlInline, formatHtmlBlock )
+import Text.Pandoc.XML (fromEntities)
 import Network.URI ( parseURIReference, URI(..), unEscapeString )
 import Network.HTTP ( urlEncode )
 import Numeric ( showHex )

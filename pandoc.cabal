@@ -208,11 +208,8 @@ Library
                  vector >= 0.10 && < 0.12,
                  hslua >= 0.3 && < 0.5,
                  binary >= 0.5 && < 0.9,
-                 SHA >= 1.6 && < 1.7,
-                 haddock-library >= 1.1 && < 1.5,
                  old-time,
                  deepseq >= 1.3 && < 1.5,
-                 JuicyPixels >= 3.1.6.1 && < 3.3,
                  filemanip >= 0.3 && < 0.4,
                  cmark >= 0.5 && < 0.6,
                  ghc-prim >= 0.2
@@ -264,8 +261,7 @@ Library
                    Text.Pandoc.SelfContained,
                    Text.Pandoc.Process,
                    Text.Pandoc.CSS
-  Other-Modules:   Text.Pandoc.Writers.Shared,
-                   Text.Pandoc.Asciify,
+  Other-Modules:   Text.Pandoc.Asciify,
                    Text.Pandoc.MIME,
                    Text.Pandoc.Emoji,
                    Text.Pandoc.Parsing,

@@ -114,7 +114,7 @@ import System.Directory
 import System.FilePath (splitDirectories, isPathSeparator)
 import qualified System.FilePath.Posix as Posix
 import Text.Pandoc.MIME (MimeType, getMimeType)
-import System.FilePath ( (</>), takeExtension, dropExtension)
+import System.FilePath (takeExtension, dropExtension)
 import Data.Generics (Typeable, Data)
 import qualified Control.Monad.State as S
 import qualified Control.Exception as E
@@ -131,14 +131,9 @@ import qualified Data.ByteString.Char8 as B8
 import Data.ByteString.Base64 (decodeLenient)
 import Data.Sequence (ViewR(..), ViewL(..), viewl, viewr)
 import qualified Data.Text as T (toUpper, pack, unpack)
-import Data.ByteString.Lazy (toChunks, fromChunks)
+import Data.ByteString.Lazy (toChunks)
 import Paths_pandoc (version)
 
-#ifdef EMBED_DATA_FILES
-import Text.Pandoc.Data (dataFiles)
-#else
-import Paths_pandoc (getDataFileName)
-#endif
 #ifdef HTTP_CLIENT
 import Network.HTTP.Client (httpLbs, parseUrl,
                             responseBody, responseHeaders,
