@@ -39,8 +39,6 @@ import Text.Pandoc.Shared ( tabFilter, safeRead, headerShift, normalize, err,
 import Text.Pandoc.MediaBag ( mediaDirectory, extractMediaBag, MediaBag )
 import Text.Pandoc.XML ( toEntities )
 import Text.Pandoc.Process (pipeProcess)
-import Text.Highlighting.Kate ( languages, Style, tango, pygments,
-         espresso, zenburn, kate, haddock, monochrome )
 import System.Environment ( getArgs, getProgName )
 import System.Exit ( ExitCode (..), exitSuccess )
 import System.FilePath
@@ -80,11 +78,7 @@ copyrightMessage = intercalate "\n" [
 
 compileInfo :: String
 compileInfo =
-  "\nCompiled with texmath " ++
-  VERSION_texmath ++ ", highlighting-kate " ++ VERSION_highlighting_kate ++
-   ".\nSyntax highlighting is supported for the following languages:\n    " ++
-       wrapWords 4 78
-       [map toLower l | l <- languages, l /= "Alert" && l /= "Alert_indent"]
+  "\nCompiled with texmath " ++ VERSION_texmath
 
 -- | Converts a list of strings into a single string with the items printed as
 -- comma separated words in lines with a maximum line length.
@@ -174,7 +168,7 @@ data Opt = Opt
     , optHtml5             :: Bool    -- ^ Produce HTML5 in HTML
     , optHtmlQTags         :: Bool    -- ^ Use <q> tags in HTML
     , optHighlight         :: Bool    -- ^ Highlight source code
-    , optHighlightStyle    :: Style   -- ^ Style to use for highlighted code
+    --, optHighlightStyle    :: Style   -- ^ Style to use for highlighted code
     , optChapters          :: Bool    -- ^ Use chapter for top-level sects
     , optHTMLMathMethod    :: HTMLMathMethod -- ^ Method to print HTML math
     , optReferenceODT      :: Maybe FilePath -- ^ Path of reference.odt
@@ -238,7 +232,7 @@ defaultOpts = Opt
     , optHtml5                 = False
     , optHtmlQTags             = False
     , optHighlight             = True
-    , optHighlightStyle        = pygments
+    --, optHighlightStyle        = pygments
     , optChapters              = False
     , optHTMLMathMethod        = PlainMath
     , optReferenceODT          = Nothing
@@ -484,23 +478,6 @@ options =
                 (NoArg
                  (\opt -> return opt { optHighlight = False }))
                  "" -- "Don't highlight source code"
-
-    , Option "" ["highlight-style"]
-                (ReqArg
-                 (\arg opt -> do
-                   newStyle <- case map toLower arg of
-                                     "pygments"   -> return pygments
-                                     "tango"      -> return tango
-                                     "espresso"   -> return espresso
-                                     "zenburn"    -> return zenburn
-                                     "kate"       -> return kate
-                                     "monochrome" -> return monochrome
-                                     "haddock"    -> return haddock
-                                     _            -> err 39 $
-                                         "Unknown style :" ++ arg
-                   return opt{ optHighlightStyle = newStyle })
-                 "STYLE")
-                 "" -- "Style for highlighted code"
 
     , Option "H" ["include-in-header"]
                  (ReqArg
@@ -1042,7 +1019,7 @@ convertWithOpts opts args = do
               , optHtml5                 = html5
               , optHtmlQTags             = htmlQTags
               , optHighlight             = highlight
-              , optHighlightStyle        = highlightStyle
+              --, optHighlightStyle        = highlightStyle
               , optChapters              = chapters
               , optHTMLMathMethod        = mathMethod'
               , optReferenceODT          = referenceODT
@@ -1256,7 +1233,7 @@ convertWithOpts opts args = do
                             writerBeamer           = False,
                             writerSlideLevel       = slideLevel,
                             writerHighlight        = highlight,
-                            writerHighlightStyle   = highlightStyle,
+                            --writerHighlightStyle   = highlightStyle,
                             writerSetextHeaders    = setextHeaders,
                             writerTeXLigatures     = texLigatures,
                             writerEpubMetadata     = epubMetadata,

@@ -37,7 +37,6 @@ import Text.Pandoc.Options
 import Text.Pandoc.ImageSize
 import Text.Pandoc.Readers.TeXMath
 import Text.Pandoc.Slides
-import Text.Pandoc.Highlighting ( highlight, formatHtmlInline, formatHtmlBlock )
 import Text.Pandoc.XML (fromEntities)
 import Network.URI ( parseURIReference, URI(..), unEscapeString )
 import Network.HTTP ( urlEncode )
@@ -426,14 +425,9 @@ blockToHtml opts (CodeBlock (id',classes,keyvals) rawCode) = do
       adjCode  = if tolhs
                     then unlines . map ("> " ++) . lines $ rawCode
                     else rawCode
-      hlCode   = if writerHighlight opts -- check highlighting options
-                    then highlight formatHtmlBlock (id',classes',keyvals) adjCode
-                    else Nothing
-  case hlCode of
-         Nothing -> return $ addAttrs opts (id',classes,keyvals)
+      hlCode   = Nothing
+  return $ addAttrs opts (id',classes,keyvals)
                            $ H.pre $ H.code $ toHtml adjCode
-         Just  h -> modify (\st -> st{ stHighlighting = True }) >>
-                    return (addAttrs opts (id',[],keyvals) h)
 blockToHtml opts (BlockQuote blocks) =
   -- in S5, treat list in blockquote specially
   -- if default is incremental, make it nonincremental;
@@ -654,9 +648,7 @@ inlineToHtml opts inline =
                                modify $ \st -> st{ stHighlighting = True }
                                return $ addAttrs opts (id',[],keyvals) h
                         where (id',_,keyvals) = attr
-                              hlCode = if writerHighlight opts
-                                          then highlight formatHtmlInline attr str
-                                          else Nothing
+                              hlCode = Nothing
     (Strikeout lst)  -> inlineListToHtml opts lst >>=
                         return . H.del
     (SmallCaps lst)   -> inlineListToHtml opts lst >>=
