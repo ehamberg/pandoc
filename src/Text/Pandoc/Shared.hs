@@ -76,9 +76,6 @@ module Text.Pandoc.Shared (
                      renderTags',
                      -- * File handling
                      inDirectory,
-                     fetchItem,
-                     fetchItem',
-                     openURL,
                      collapseFilePath,
                      -- * Error handling
                      err,
@@ -95,7 +92,6 @@ module Text.Pandoc.Shared (
 
 import Text.Pandoc.Definition
 import Text.Pandoc.Walk
-import Text.Pandoc.MediaBag (MediaBag, lookupMedia)
 import Text.Pandoc.Builder (Inlines, Blocks, ToMetaValue(..))
 import qualified Text.Pandoc.Builder as B
 import qualified Text.Pandoc.UTF8 as UTF8
@@ -106,15 +102,11 @@ import Data.Char ( toLower, isLower, isUpper, isAlpha,
 import Data.List ( find, stripPrefix, intercalate )
 import Data.Version ( showVersion )
 import qualified Data.Map as M
-import Network.URI ( escapeURIString, nonStrictRelativeTo,
-                     unEscapeString, parseURIReference, isAllowedInURI,
-                     parseURI, URI(..) )
+import Network.URI ( escapeURIString, parseURIReference, URI(..) )
 import qualified Data.Set as Set
 import System.Directory
 import System.FilePath (splitDirectories, isPathSeparator)
 import qualified System.FilePath.Posix as Posix
-import Text.Pandoc.MIME (MimeType, getMimeType)
-import System.FilePath (takeExtension, dropExtension)
 import Data.Generics (Typeable, Data)
 import qualified Control.Monad.State as S
 import qualified Control.Exception as E
@@ -126,34 +118,9 @@ import System.IO.Temp
 import Text.HTML.TagSoup (renderTagsOptions, RenderOptions(..), Tag(..),
          renderOptions)
 import Text.Pandoc.Compat.Monoid ((<>))
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as B8
-import Data.ByteString.Base64 (decodeLenient)
 import Data.Sequence (ViewR(..), ViewL(..), viewl, viewr)
 import qualified Data.Text as T (toUpper, pack, unpack)
-import Data.ByteString.Lazy (toChunks)
 import Paths_pandoc (version)
-
-#ifdef HTTP_CLIENT
-import Network.HTTP.Client (httpLbs, parseUrl,
-                            responseBody, responseHeaders,
-                            Request(port,host))
-#if MIN_VERSION_http_client(0,4,18)
-import Network.HTTP.Client (newManager)
-#else
-import Network.HTTP.Client (withManager)
-#endif
-import Network.HTTP.Client.Internal (addProxy)
-import Network.HTTP.Client.TLS (tlsManagerSettings)
-import System.Environment (getEnv)
-import Network.HTTP.Types.Header ( hContentType)
-import Network (withSocketsDo)
-#else
-import Network.URI (parseURI)
-import Network.HTTP (findHeader, rspBody,
-                     RequestMethod(..), HeaderName(..), mkRequest)
-import Network.Browser (browse, setAllowRedirects, setOutHandler, request)
-#endif
 
 -- | Version number of pandoc library.
 pandocVersion :: String
@@ -779,81 +746,6 @@ parseURIReference' s =
          | length (uriScheme u) > 2  -> Just u
          | null (uriScheme u)        -> Just u  -- protocol-relative
        _                             -> Nothing
-
--- | Fetch an image or other item from the local filesystem or the net.
--- Returns raw content and maybe mime type.
-fetchItem :: Maybe String -> String
-          -> IO (Either E.SomeException (BS.ByteString, Maybe MimeType))
-fetchItem sourceURL s =
-  case (sourceURL >>= parseURIReference' . ensureEscaped, ensureEscaped s) of
-       (Just u, s') -> -- try fetching from relative path at source
-          case parseURIReference' s' of
-               Just u' -> openURL $ show $ u' `nonStrictRelativeTo` u
-               Nothing -> openURL s' -- will throw error
-       (Nothing, s') ->
-          case parseURI s' of  -- requires absolute URI
-               -- We don't want to treat C:/ as a scheme:
-               Just u' | length (uriScheme u') > 2 -> openURL (show u')
-               Just u' | uriScheme u' == "file:" ->
-                    E.try $ readLocalFile $ dropWhile (=='/') (uriPath u')
-               _ -> E.try $ readLocalFile fp -- get from local file system
-  where readLocalFile f = do
-          cont <- BS.readFile f
-          return (cont, mime)
-        dropFragmentAndQuery = takeWhile (\c -> c /= '?' && c /= '#')
-        fp = unEscapeString $ dropFragmentAndQuery s
-        mime = case takeExtension fp of
-                    ".gz" -> getMimeType $ dropExtension fp
-                    ".svgz" -> getMimeType $ dropExtension fp ++ ".svg"
-                    x     -> getMimeType x
-        ensureEscaped = escapeURIString isAllowedInURI . map convertSlash
-        convertSlash '\\' = '/'
-        convertSlash x    = x
-
--- | Like 'fetchItem', but also looks for items in a 'MediaBag'.
-fetchItem' :: MediaBag -> Maybe String -> String
-           -> IO (Either E.SomeException (BS.ByteString, Maybe MimeType))
-fetchItem' media sourceURL s = do
-  case lookupMedia s media of
-       Nothing -> fetchItem sourceURL s
-       Just (mime, bs) -> return $ Right (BS.concat $ toChunks bs, Just mime)
-
--- | Read from a URL and return raw data and maybe mime type.
-openURL :: String -> IO (Either E.SomeException (BS.ByteString, Maybe MimeType))
-openURL u
-  | Just u'' <- stripPrefix "data:" u =
-    let mime     = takeWhile (/=',') u''
-        contents = B8.pack $ unEscapeString $ drop 1 $ dropWhile (/=',') u''
-    in  return $ Right (decodeLenient contents, Just mime)
-#ifdef HTTP_CLIENT
-  | otherwise = withSocketsDo $ E.try $ do
-     req <- parseUrl u
-     (proxy :: Either E.SomeException String) <- E.try $ getEnv "http_proxy"
-     let req' = case proxy of
-                     Left _   -> req
-                     Right pr -> case parseUrl pr of
-                                      Just r  -> addProxy (host r) (port r) req
-                                      Nothing -> req
-#if MIN_VERSION_http_client(0,4,18)
-     resp <- newManager tlsManagerSettings >>= httpLbs req'
-#else
-     resp <- withManager tlsManagerSettings $ httpLbs req'
-#endif
-     return (BS.concat $ toChunks $ responseBody resp,
-             UTF8.toString `fmap` lookup hContentType (responseHeaders resp))
-#else
-  | otherwise = E.try $ getBodyAndMimeType `fmap` browse
-              (do S.liftIO $ UTF8.hPutStrLn stderr $ "Fetching " ++ u ++ "..."
-                  setOutHandler $ const (return ())
-                  setAllowRedirects True
-                  request (getRequest' u'))
-  where getBodyAndMimeType (_, r) = (rspBody r, findHeader HdrContentType r)
-        getRequest' uriString = case parseURI uriString of
-                                   Nothing -> error ("Not a valid URL: " ++
-                                                        uriString)
-                                   Just v  -> mkRequest GET v
-        u' = escapeURIString (/= '|') u  -- pipes are rejected by Network.URI
-#endif
 
 --
 -- Error reporting

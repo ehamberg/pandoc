@@ -35,10 +35,9 @@ import Text.Pandoc.Builder (setMeta)
 import Text.Pandoc.Walk (walk)
 import Text.Pandoc.Readers.LaTeX (handleIncludes)
 import Text.Pandoc.Shared ( tabFilter, safeRead, headerShift, normalize, err,
-                            warn, openURL )
+                            warn )
 import Text.Pandoc.MediaBag ( mediaDirectory, extractMediaBag, MediaBag )
 import Text.Pandoc.XML ( toEntities )
-import Text.Pandoc.SelfContained ( makeSelfContained )
 import Text.Pandoc.Process (pipeProcess)
 import Text.Highlighting.Kate ( languages, Style, tango, pygments,
          espresso, zenburn, kate, haddock, monochrome )
@@ -535,12 +534,6 @@ options =
                                   optStandalone = True })
                   "FILENAME")
                  "" -- "File to include after document body"
-
-    , Option "" ["self-contained"]
-                 (NoArg
-                  (\opt -> return opt { optSelfContained = True,
-                                        optStandalone = True }))
-                 "" -- "Make slide shows include all the needed js and css"
 
     , Option "" ["html-q-tags"]
                  (NoArg
@@ -1200,15 +1193,7 @@ convertWithOpts opts args = do
   let readSources [] = mapM readSource ["-"]
       readSources srcs = mapM readSource srcs
       readSource "-" = UTF8.getContents
-      readSource src = case parseURI src of
-                            Just u | uriScheme u `elem` ["http:","https:"] ->
-                                       readURI src
-                            _       -> UTF8.readFile src
-      readURI src = do
-        res <- openURL src
-        case res of
-             Left e        -> throwIO e
-             Right (bs,_)  -> return $ UTF8.toString bs
+      readSource src = UTF8.readFile src
 
   let readFiles [] = error "Cannot read archive from stdin"
       readFiles [x] = B.readFile x
@@ -1303,14 +1288,11 @@ convertWithOpts opts args = do
     IOStringWriter f -> f writerOptions doc' >>= writerFn outputFile
     IOByteStringWriter f -> f writerOptions doc' >>= writeBinary
     PureStringWriter f
-      | otherwise -> selfcontain (f writerOptions doc' ++
+      | otherwise -> return (f writerOptions doc' ++
                                   ['\n' | not standalone'])
                       >>= writerFn outputFile . handleEntities
           where htmlFormat = format `elem`
                   ["html","html5","s5","slidy","slideous","dzslides","revealjs"]
-                selfcontain = if selfContained && htmlFormat
-                                 then makeSelfContained writerOptions
-                                 else return
                 handleEntities = if htmlFormat && ascii
                                     then toEntities
                                     else id

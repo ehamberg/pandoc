@@ -153,18 +153,6 @@ Source-repository head
   type:          git
   location:      git://github.com/jgm/pandoc.git
 
-Flag embed_data_files
-  Description:   Embed data files in binary for relocatable executable.
-  Default:       False
-
-Flag https
-  Description:   Enable support for downloading of resources over https.
-  Default:       True
-
-Flag network-uri
-  Description:   Get Network.URI from the network-uri package
-  Default:       True
-
 Flag old-locale
   Description:   Use old-locale and time < 1.5
   Default:       False
@@ -205,27 +193,9 @@ Library
                  deepseq >= 1.3 && < 1.5,
                  filemanip >= 0.3 && < 0.4,
                  cmark >= 0.5 && < 0.6,
-                 ghc-prim >= 0.2
-  if flag(old-locale)
-     Build-Depends: old-locale >= 1 && < 1.1,
-                    time >= 1.2 && < 1.5
-  else
-     Build-Depends: time >= 1.5 && < 1.7
-  if flag(network-uri)
-     Build-Depends: network-uri >= 2.6 && < 2.7, network >= 2.6
-  else
-     Build-Depends: network >= 2 && < 2.6
-  if flag(https)
-     Build-Depends: http-client >= 0.3.2 && < 0.5,
-                    http-client-tls >= 0.2 && < 0.3,
-                    http-types >= 0.8 && < 0.10
-     cpp-options:   -DHTTP_CLIENT
-  if flag(embed_data_files)
-     cpp-options:   -DEMBED_DATA_FILES
-     Build-Tools:   hsb2hs >= 0.3.1
-     other-modules: Text.Pandoc.Data
-  if os(windows)
-    Cpp-options:      -D_WINDOWS
+                 ghc-prim >= 0.2,
+                 time >= 1.5 && < 1.7,
+                 network-uri >= 2.6 && < 2.7
   Ghc-Options:   -rtsopts -Wall -fno-warn-unused-do-bind
   Ghc-Prof-Options: -fprof-auto-exported -rtsopts
   Default-Language: Haskell98
@@ -251,7 +221,6 @@ Library
                    Text.Pandoc.Writers.HTML,
                    Text.Pandoc.UTF8,
                    Text.Pandoc.XML,
-                   Text.Pandoc.SelfContained,
                    Text.Pandoc.Process,
                    Text.Pandoc.CSS
   Other-Modules:   Text.Pandoc.Asciify,
@@ -284,11 +253,8 @@ Executable pandoc
                  aeson >= 0.7.0.5 && < 0.12,
                  yaml >= 0.8.8.2 && < 0.9,
                  containers >= 0.1 && < 0.6,
-                 HTTP >= 4000.0.5 && < 4000.4
-  if flag(network-uri)
-     Build-Depends: network-uri >= 2.6 && < 2.7, network >= 2.6
-  else
-     Build-Depends: network >= 2 && < 2.6
+                 HTTP >= 4000.0.5 && < 4000.4,
+                 network-uri
   Ghc-Options:   -rtsopts -with-rtsopts=-K16m -Wall -fno-warn-unused-do-bind
   Ghc-Prof-Options: -fprof-auto-exported -rtsopts -with-rtsopts=-K16m
   if os(windows)
