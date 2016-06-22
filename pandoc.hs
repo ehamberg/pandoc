@@ -33,10 +33,8 @@ module Main where
 import Text.Pandoc
 import Text.Pandoc.Builder (setMeta)
 import Text.Pandoc.Walk (walk)
-import Text.Pandoc.Readers.LaTeX (handleIncludes)
 import Text.Pandoc.Shared ( tabFilter, safeRead, headerShift, normalize, err,
                             warn )
-import Text.Pandoc.MediaBag ( mediaDirectory, extractMediaBag, MediaBag )
 import Text.Pandoc.XML ( toEntities )
 import Text.Pandoc.Process (pipeProcess)
 import System.Environment ( getArgs, getProgName )
@@ -380,13 +378,6 @@ options =
                  (NoArg
                   (\opt -> return opt { optFileScope = True }))
                  "" -- "Parse input files before combining"
-
-    , Option "" ["extract-media"]
-                 (ReqArg
-                  (\arg opt ->
-                    return opt { optExtractMedia = Just arg })
-                  "PATH")
-                 "" -- "Directory to which to extract embedded media"
 
     , Option "s" ["standalone"]
                  (NoArg
@@ -952,14 +943,6 @@ defaultWriterName x =
 
 -- Transformations of a Pandoc document post-parsing:
 
-extractMedia :: MediaBag -> FilePath -> Pandoc -> IO Pandoc
-extractMedia media dir d =
-  case [fp | (fp, _, _) <- mediaDirectory media] of
-        []  -> return d
-        fps -> do
-          extractMediaBag True dir media
-          return $ walk (adjustImagePath dir fps) d
-
 adjustImagePath :: FilePath -> [FilePath] -> Inline -> Inline
 adjustImagePath dir paths (Image attr lab (src, tit))
    | src `elem` paths = Image attr lab (dir ++ "/" ++ src, tit)
@@ -1050,7 +1033,6 @@ convertWithOpts opts args = do
               , optAscii                 = ascii
               , optTeXLigatures          = texLigatures
               , optDefaultImageExtension = defaultImageExtension
-              , optExtractMedia          = mbExtractMedia
               , optTrace                 = trace
               , optTrackChanges          = trackChanges
               , optFileScope            = fileScope
@@ -1181,30 +1163,25 @@ convertWithOpts opts args = do
                                  else tabStop)
 
   let handleIncludes' :: String -> IO (Either PandocError String)
-      handleIncludes' = if readerName' `elem`  ["latex", "latex+lhs"]
-                               then handleIncludes
-                               else return . Right
+      handleIncludes' = return . Right
 
-  let sourceToDoc :: [FilePath] -> IO (Pandoc, MediaBag)
+  let sourceToDoc :: [FilePath] -> IO Pandoc
       sourceToDoc sources' = fmap handleError $
         case reader of
-          StringReader r-> do
+          StringReader r -> do
             srcs <- convertTabs . intercalate "\n" <$> readSources sources'
             doc <- handleIncludes' srcs
-            either (return . Left) (\s -> fmap (,mempty) <$> r readerOpts s) doc
-          ByteStringReader r -> readFiles sources' >>= r readerOpts
+            either (return . Left) (\s -> r readerOpts s) doc
+          --ByteStringReader r -> readFiles sources' >>= r readerOpts
 
   -- We parse first if (1) fileScope is set, (2), it's a binary
   -- reader, or (3) we're reading JSON. This is easier to do of an AND
   -- of negatives as opposed to an OR of positives, so we do default
   -- parsing if it's a StringReader AND (fileScope is set AND it's not
   -- a JSON reader).
-  (doc, media) <- case reader of
+  doc <- case reader of
     (StringReader _) | not fileScope && readerName' /= "json" ->
                          sourceToDoc sources
-    _ | null sources -> sourceToDoc sources
-    _  -> do pairs <- mapM (\s -> sourceToDoc [s]) sources
-             return (mconcat $ map fst pairs, mconcat $ map snd pairs)
 
   let writerOptions = def { writerStandalone       = standalone',
                             writerTemplate         = templ,
@@ -1243,16 +1220,10 @@ convertWithOpts opts args = do
                             writerTOCDepth         = epubTOCDepth,
                             writerReferenceODT     = referenceODT,
                             writerReferenceDocx    = referenceDocx,
-                            writerMediaBag         = media,
                             writerVerbose          = verbose,
                             writerLaTeXArgs        = latexEngineArgs
                           }
 
-
-  doc' <- (maybe return (extractMedia media) mbExtractMedia >=>
-           adjustMetadata metadata >=>
-           applyTransforms transforms >=>
-           applyFilters filters' [format]) doc
 
   let writeBinary :: B.ByteString -> IO ()
       writeBinary = B.writeFile (UTF8.encodePath outputFile)
@@ -1262,10 +1233,10 @@ convertWithOpts opts args = do
       writerFn f   = UTF8.writeFile f
 
   case writer of
-    IOStringWriter f -> f writerOptions doc' >>= writerFn outputFile
-    IOByteStringWriter f -> f writerOptions doc' >>= writeBinary
+    IOStringWriter f -> f writerOptions doc >>= writerFn outputFile
+    IOByteStringWriter f -> f writerOptions doc >>= writeBinary
     PureStringWriter f
-      | otherwise -> return (f writerOptions doc' ++
+      | otherwise -> return (f writerOptions doc ++
                                   ['\n' | not standalone'])
                       >>= writerFn outputFile . handleEntities
           where htmlFormat = format `elem`

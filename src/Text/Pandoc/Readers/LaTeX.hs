@@ -31,8 +31,7 @@ Conversion of LaTeX to 'Pandoc' document.
 module Text.Pandoc.Readers.LaTeX ( readLaTeX,
                                    rawLaTeXInline,
                                    rawLaTeXBlock,
-                                   inlineCommand,
-                                   handleIncludes
+                                   inlineCommand
                                  ) where
 
 import Text.Pandoc.Definition
@@ -41,19 +40,13 @@ import Text.Pandoc.Shared
 import Text.Pandoc.Options
 import Text.Pandoc.Parsing hiding ((<|>), many, optional, space,
                                    mathDisplay, mathInline)
-import qualified Text.Pandoc.UTF8 as UTF8
 import Data.Char ( chr, ord, isLetter, isAlphaNum )
-import Control.Monad.Trans (lift)
 import Control.Monad
 import Text.Pandoc.Builder
 import Control.Applicative ((<|>), many, optional)
 import Data.Maybe (fromMaybe, maybeToList)
-import System.Environment (getEnv)
-import System.FilePath (replaceExtension, (</>), takeExtension, addExtension)
 import Data.List (intercalate)
 import qualified Data.Map as M
-import qualified Control.Exception as E
-import Text.Pandoc.ImageSize (numUnit, showFl)
 import Text.Pandoc.Error
 
 -- | Parse LaTeX from string and return 'Pandoc' document.
@@ -346,10 +339,6 @@ blockCommands = M.fromList $
   , ("caption", skipopts *> setCaption)
   , ("PandocStartInclude", startInclude)
   , ("PandocEndInclude", endInclude)
-  , ("bibliography", mempty <$ (skipopts *> braced >>=
-                                addMeta "bibliography" . splitBibs))
-  , ("addbibresource", mempty <$ (skipopts *> braced >>=
-                                addMeta "bibliography" . splitBibs))
   ] ++ map ignoreBlocks
   -- these commands will be ignored unless --parse-raw is specified,
   -- in which case they will appear as raw latex blocks
@@ -372,9 +361,6 @@ blockCommands = M.fromList $
 addMeta :: ToMetaValue a => String -> a -> LP ()
 addMeta field val = updateState $ \st ->
   st{ stateMeta = addMetaField field val $ stateMeta st }
-
-splitBibs :: String -> [Inlines]
-splitBibs = map (str . flip replaceExtension "bib" . trim) . splitBy (==',')
 
 setCaption :: LP Blocks
 setCaption = do
@@ -554,9 +540,6 @@ inlineCommands = M.fromList $
   , ("href", (unescapeURL <$> braced <* optional sp) >>= \url ->
        tok >>= \lab ->
          pure (link url "" lab))
-  , ("includegraphics", do options <- option [] keyvals
-                           src <- unescapeURL <$> braced
-                           mkImage options src)
   , ("enquote", enquote)
   , ("cite", citation "cite" AuthorInText False)
   , ("Cite", citation "cite" AuthorInText False)
@@ -617,20 +600,6 @@ inlineCommands = M.fromList $
   -- these commands will be ignored unless --parse-raw is specified,
   -- in which case they will appear as raw latex blocks:
   [ "index" ]
-
-mkImage :: [(String, String)] -> String -> LP Inlines
-mkImage options src = do
-   let replaceTextwidth (k,v) = case numUnit v of
-                                  Just (num, "\\textwidth") -> (k, showFl (num * 100) ++ "%")
-                                  _ -> (k, v)
-   let kvs = map replaceTextwidth $ filter (\(k,_) -> k `elem` ["width", "height"]) options
-   let attr = ("",[], kvs)
-   let alt = str "image"
-   case takeExtension src of
-        "" -> do
-              defaultExt <- getOption readerDefaultImageExtension
-              return $ imageWith attr (addExtension src defaultExt) "" alt
-        _  -> return $ imageWith attr src "" alt
 
 inNote :: Inlines -> Inlines
 inNote ils =
@@ -888,123 +857,6 @@ rawEnv name = do
      then (rawBlock "latex" . addBegin) <$>
             (withRaw (env name blocks) >>= applyMacros' . snd)
      else env name blocks
-
-----
-
-type IncludeParser = ParserT String [String] IO String
-
--- | Replace "include" commands with file contents.
-handleIncludes :: String -> IO (Either PandocError String)
-handleIncludes s =  mapLeft (ParsecError s) <$> runParserT includeParser' [] "input" s
-
-includeParser' :: IncludeParser
-includeParser' =
-  concat <$> many (comment' <|> escaped' <|> blob' <|> include'
-                   <|> startMarker' <|> endMarker'
-                   <|> verbCmd' <|> verbatimEnv' <|> backslash')
-
-comment' :: IncludeParser
-comment' = do
-  char '%'
-  xs <- manyTill anyChar newline
-  return ('%':xs ++ "\n")
-
-escaped' :: IncludeParser
-escaped' = try $ string "\\%" <|> string "\\\\"
-
-verbCmd' :: IncludeParser
-verbCmd' = fmap snd <$>
-  withRaw $ try $ do
-             string "\\verb"
-             c <- anyChar
-             manyTill anyChar (char c)
-
-verbatimEnv' :: IncludeParser
-verbatimEnv' = fmap snd <$>
-  withRaw $ try $ do
-             string "\\begin"
-             name <- braced'
-             guard $ name `elem` ["verbatim", "Verbatim", "lstlisting",
-                                  "minted", "alltt", "comment"]
-             manyTill anyChar (try $ string $ "\\end{" ++ name ++ "}")
-
-blob' :: IncludeParser
-blob' = try $ many1 (noneOf "\\%")
-
-backslash' :: IncludeParser
-backslash' = string "\\"
-
-braced' :: IncludeParser
-braced' = try $ char '{' *> manyTill (satisfy (/='}')) (char '}')
-
-maybeAddExtension :: String -> FilePath -> FilePath
-maybeAddExtension ext fp =
-  if null (takeExtension fp)
-     then addExtension fp ext
-     else fp
-
-include' :: IncludeParser
-include' = do
-  fs' <- try $ do
-              char '\\'
-              name <- try (string "include")
-                  <|> try (string "input")
-                  <|> string "usepackage"
-              -- skip options
-              skipMany $ try $ char '[' *> manyTill anyChar (char ']')
-              fs <- (map trim . splitBy (==',')) <$> braced'
-              return $ if name == "usepackage"
-                          then map (maybeAddExtension ".sty") fs
-                          else map (maybeAddExtension ".tex") fs
-  pos <- getPosition
-  containers <- getState
-  let fn = case containers of
-                (f':_) -> f'
-                []     -> "input"
-  -- now process each include file in order...
-  rest <- getInput
-  results' <- forM fs' (\f -> do
-    when (f `elem` containers) $
-      fail "Include file loop!"
-    contents <- lift $ readTeXFile f
-    return $ "\\PandocStartInclude{" ++ f ++ "}" ++
-             contents ++ "\\PandocEndInclude{" ++
-             fn ++ "}{" ++ show (sourceLine pos) ++ "}{"
-             ++ show (sourceColumn pos) ++ "}")
-  setInput $ concat results' ++ rest
-  return ""
-
-startMarker' :: IncludeParser
-startMarker' = try $ do
-  string "\\PandocStartInclude"
-  fn <- braced'
-  updateState (fn:)
-  setPosition $ newPos fn 1 1
-  return $ "\\PandocStartInclude{" ++ fn ++ "}"
-
-endMarker' :: IncludeParser
-endMarker' = try $ do
-  string "\\PandocEndInclude"
-  fn <- braced'
-  ln <- braced'
-  co <- braced'
-  updateState tail
-  setPosition $ newPos fn (fromMaybe 1 $ safeRead ln) (fromMaybe 1 $ safeRead co)
-  return $ "\\PandocEndInclude{" ++ fn ++ "}{" ++ ln ++ "}{" ++
-               co ++ "}"
-
-readTeXFile :: FilePath -> IO String
-readTeXFile f = do
-  texinputs <- E.catch (getEnv "TEXINPUTS") $ \(_ :: E.SomeException) ->
-                   return "."
-  let ds = splitBy (==':') texinputs
-  readFileFromDirs ds f
-
-readFileFromDirs :: [FilePath] -> FilePath -> IO String
-readFileFromDirs [] _ = return ""
-readFileFromDirs (d:ds) f =
-  E.catch (UTF8.readFile $ d </> f) $ \(_ :: E.SomeException) ->
-    readFileFromDirs ds f
 
 ----
 

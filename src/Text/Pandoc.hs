@@ -86,7 +86,6 @@ import Text.Pandoc.Readers.Markdown
 import Text.Pandoc.Writers.HTML
 import Text.Pandoc.Options
 import Text.Pandoc.Shared (safeRead, warn, pandocVersion)
-import Text.Pandoc.MediaBag (MediaBag)
 import Text.Pandoc.Error
 import qualified Data.ByteString.Lazy as BL
 import Data.List (intercalate)
@@ -117,7 +116,6 @@ parseFormatSpec = parse formatSpec ""
 
 
 data Reader = StringReader (ReaderOptions -> String -> IO (Either PandocError Pandoc))
-              | ByteStringReader (ReaderOptions -> BL.ByteString -> IO (Either PandocError (Pandoc,MediaBag)))
 
 mkStringReader :: (ReaderOptions -> String -> Either PandocError Pandoc) -> Reader
 mkStringReader r = StringReader (\o s -> return $ r o s)
@@ -181,9 +179,6 @@ getReader s =
            case lookup readerName readers of
                    Nothing  -> Left $ "Unknown reader: " ++ readerName
                    Just  (StringReader r)  -> Right $ StringReader $ \o ->
-                                  r o{ readerExtensions = setExts $
-                                            getDefaultExtensions readerName }
-                   Just (ByteStringReader r) -> Right $ ByteStringReader $ \o ->
                                   r o{ readerExtensions = setExts $
                                             getDefaultExtensions readerName }
 

@@ -165,7 +165,6 @@ Library
                  array >= 0.3 && < 0.6,
                  parsec >= 3.1 && < 3.2,
                  mtl >= 1.1 && < 2.3,
-                 filepath >= 1.1 && < 1.5,
                  process >= 1 && < 1.5,
                  directory >= 1 && < 1.3,
                  bytestring >= 0.9 && < 0.11,
@@ -210,7 +209,6 @@ Library
                    Text.Pandoc.Options,
                    Text.Pandoc.Pretty,
                    Text.Pandoc.Shared,
-                   Text.Pandoc.MediaBag,
                    Text.Pandoc.Error,
                    Text.Pandoc.Readers.HTML
                    Text.Pandoc.Readers.LaTeX,
@@ -222,7 +220,6 @@ Library
                    Text.Pandoc.Process,
                    Text.Pandoc.CSS
   Other-Modules:   Text.Pandoc.Asciify,
-                   Text.Pandoc.MIME,
                    Text.Pandoc.Emoji,
                    Text.Pandoc.Parsing,
                    Text.Pandoc.UUID,

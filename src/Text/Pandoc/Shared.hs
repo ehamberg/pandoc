@@ -74,9 +74,6 @@ module Text.Pandoc.Shared (
                      makeMeta,
                      -- * TagSoup HTML handling
                      renderTags',
-                     -- * File handling
-                     inDirectory,
-                     collapseFilePath,
                      -- * Error handling
                      err,
                      warn,
@@ -84,8 +81,6 @@ module Text.Pandoc.Shared (
                      hush,
                      -- * Safe read
                      safeRead,
-                     -- * Temp directory
-                     withTempDir,
                      -- * Version
                      pandocVersion
                     ) where
@@ -104,17 +99,12 @@ import Data.Version ( showVersion )
 import qualified Data.Map as M
 import Network.URI ( escapeURIString, parseURIReference, URI(..) )
 import qualified Data.Set as Set
-import System.Directory
-import System.FilePath (splitDirectories, isPathSeparator)
-import qualified System.FilePath.Posix as Posix
 import Data.Generics (Typeable, Data)
 import qualified Control.Monad.State as S
-import qualified Control.Exception as E
 import Control.Monad (msum, unless, MonadPlus(..))
 import Text.Pandoc.Pretty (charWidth)
 import Text.Pandoc.Compat.Time
 import System.IO (stderr)
-import System.IO.Temp
 import Text.HTML.TagSoup (renderTagsOptions, RenderOptions(..), Tag(..),
          renderOptions)
 import Text.Pandoc.Compat.Monoid ((<>))
@@ -729,13 +719,6 @@ renderTags' = renderTagsOptions
 -- File handling
 --
 
--- | Perform an IO action in a directory, returning to starting directory.
-inDirectory :: FilePath -> IO a -> IO a
-inDirectory path action = E.bracket
-                             getCurrentDirectory
-                             setCurrentDirectory
-                             (const $ setCurrentDirectory path >> action)
-
 -- | Specialized version of parseURIReference that disallows
 -- single-letter schemes.  Reason:  these are usually windows absolute
 -- paths.
@@ -771,30 +754,6 @@ hush :: Either a b -> Maybe b
 hush (Left _) = Nothing
 hush (Right x) = Just x
 
--- | Remove intermediate "." and ".." directories from a path.
---
--- > collapseFilePath "./foo" == "foo"
--- > collapseFilePath "/bar/../baz" == "/baz"
--- > collapseFilePath "/../baz" == "/../baz"
--- > collapseFilePath "parent/foo/baz/../bar" ==  "parent/foo/bar"
--- > collapseFilePath "parent/foo/baz/../../bar" ==  "parent/bar"
--- > collapseFilePath "parent/foo/.." ==  "parent"
--- > collapseFilePath "/parent/foo/../../bar" ==  "/bar"
-collapseFilePath :: FilePath -> FilePath
-collapseFilePath = Posix.joinPath . reverse . foldl go [] . splitDirectories
-  where
-    go rs "." = rs
-    go r@(p:rs) ".." = case p of
-                            ".." -> ("..":r)
-                            (checkPathSeperator -> Just True) -> ("..":r)
-                            _ -> rs
-    go _ (checkPathSeperator -> Just True) = [[Posix.pathSeparator]]
-    go rs x = x:rs
-    isSingleton [] = Nothing
-    isSingleton [x] = Just x
-    isSingleton _ = Nothing
-    checkPathSeperator = fmap isPathSeparator . isSingleton
-
 --
 -- Safe read
 --
@@ -804,15 +763,3 @@ safeRead s = case reads s of
                   (d,x):_
                     | all isSpace x -> return d
                   _                 -> mzero
-
---
--- Temp directory
---
-
-withTempDir :: String -> (FilePath -> IO a) -> IO a
-withTempDir =
-#ifdef _WINDOWS
-  withTempDirectory "."
-#else
-  withSystemTempDirectory
-#endif

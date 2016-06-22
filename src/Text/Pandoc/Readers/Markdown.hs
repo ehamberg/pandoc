@@ -59,7 +59,6 @@ import Text.Pandoc.Readers.LaTeX ( rawLaTeXInline, rawLaTeXBlock )
 import Text.Pandoc.Readers.HTML ( htmlTag, htmlInBalanced, isInlineTag, isBlockTag,
                                   isTextTag, isCommentTag )
 import Control.Monad
-import System.FilePath (takeExtension, addExtension)
 import Text.HTML.TagSoup
 import qualified Data.Set as Set
 import Text.Printf (printf)
@@ -1824,10 +1823,7 @@ image :: MarkdownParser (F Inlines)
 image = try $ do
   char '!'
   (lab,raw) <- reference
-  defaultExt <- getOption readerDefaultImageExtension
-  let constructor attr' src = case takeExtension src of
-                          "" -> B.imageWith attr' (addExtension src defaultExt)
-                          _  -> B.imageWith attr' src
+  let constructor = B.imageWith
   regLink constructor lab <|> referenceLink constructor (lab,raw)
 
 note :: MarkdownParser (F Inlines)

@@ -63,7 +63,6 @@ import Text.TeXMath
 import Text.XML.Light.Output
 import Text.XML.Light (unode, elChildren, unqual)
 import qualified Text.XML.Light as XML
-import System.FilePath (takeExtension)
 
 data WriterState = WriterState
     { stNotes            :: [Html]  -- ^ List of notes
@@ -358,12 +357,12 @@ imageExts = [ "art", "bmp", "cdr", "cdt", "cpt", "cr2", "crw", "djvu", "erf",
               "wbmp", "xbm", "xpm", "xwd" ]
 
 treatAsImage :: FilePath -> Bool
-treatAsImage fp =
-  let path = case uriPath `fmap` parseURIReference fp of
-                  Nothing -> fp
-                  Just up -> up
-      ext  = map toLower $ drop 1 $ takeExtension path
-  in  null ext || ext `elem` imageExts
+treatAsImage fp = False
+  -- let path = case uriPath `fmap` parseURIReference fp of
+  --                 Nothing -> fp
+  --                 Just up -> up
+  --     ext  = map toLower $ drop 1 $ takeExtension path
+  -- in  null ext || ext `elem` imageExts
 
 -- | Convert Pandoc block element to HTML.
 blockToHtml :: WriterOptions -> Block -> State WriterState Html

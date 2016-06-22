@@ -51,7 +51,6 @@ module Text.Pandoc.Options ( Extension(..)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Default
-import Text.Pandoc.MediaBag (MediaBag)
 import Data.Data (Data)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
@@ -375,7 +374,6 @@ data WriterOptions = WriterOptions
   , writerTOCDepth         :: Int            -- ^ Number of levels to include in TOC
   , writerReferenceODT     :: Maybe FilePath -- ^ Path to reference ODT if specified
   , writerReferenceDocx    :: Maybe FilePath -- ^ Path to reference DOCX if specified
-  , writerMediaBag         :: MediaBag       -- ^ Media collected by docx or epub reader
   , writerVerbose          :: Bool           -- ^ Verbose debugging output
   , writerLaTeXArgs        :: [String]       -- ^ Flags to pass to latex-engine
   } deriving (Show, Data, Typeable, Generic)
@@ -422,7 +420,6 @@ instance Default WriterOptions where
                       , writerTOCDepth         = 3
                       , writerReferenceODT     = Nothing
                       , writerReferenceDocx    = Nothing
-                      , writerMediaBag         = mempty
                       , writerVerbose          = False
                       , writerLaTeXArgs        = []
                       }
