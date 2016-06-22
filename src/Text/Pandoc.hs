@@ -70,87 +70,33 @@ module Text.Pandoc
                , readHtml
                -- * Writers: converting /from/ Pandoc format
               , Writer (..)
-               , writeNative
-               , writeJSON
-               , writeMarkdown
-               , writePlain
-               , writeRST
-               , writeLaTeX
-               , writeConTeXt
-               , writeTexinfo
                , writeHtml
                , writeHtmlString
-               , writeICML
-               , writeDocbook
-               , writeOPML
-               , writeOpenDocument
-               , writeMan
-               , writeMediaWiki
-               , writeDokuWiki
-               , writeTextile
-               , writeRTF
-               , writeODT
-               , writeEPUB
-               , writeFB2
-               , writeOrg
-               , writeAsciiDoc
-               , writeHaddock
-               , writeCommonMark
-               , writeCustom
-               , writeTEI
                -- * Rendering templates and default templates
                , module Text.Pandoc.Templates
                -- * Miscellaneous
                , getReader
                , getWriter
-               , ToJsonFilter(..)
                , pandocVersion
              ) where
 
 import Text.Pandoc.Definition
 import Text.Pandoc.Generic
-import Text.Pandoc.JSON
 import Text.Pandoc.Readers.HTML
 import Text.Pandoc.Readers.LaTeX
 import Text.Pandoc.Readers.Markdown
-import Text.Pandoc.Writers.Native
-import Text.Pandoc.Writers.Markdown
-import Text.Pandoc.Writers.RST
-import Text.Pandoc.Writers.LaTeX
-import Text.Pandoc.Writers.ConTeXt
-import Text.Pandoc.Writers.Texinfo
 import Text.Pandoc.Writers.HTML
-import Text.Pandoc.Writers.ODT
-import Text.Pandoc.Writers.EPUB
-import Text.Pandoc.Writers.FB2
-import Text.Pandoc.Writers.ICML
-import Text.Pandoc.Writers.Docbook
-import Text.Pandoc.Writers.OPML
-import Text.Pandoc.Writers.OpenDocument
-import Text.Pandoc.Writers.Man
-import Text.Pandoc.Writers.RTF
-import Text.Pandoc.Writers.MediaWiki
-import Text.Pandoc.Writers.DokuWiki
-import Text.Pandoc.Writers.Textile
-import Text.Pandoc.Writers.Org
-import Text.Pandoc.Writers.AsciiDoc
-import Text.Pandoc.Writers.Haddock
-import Text.Pandoc.Writers.CommonMark
-import Text.Pandoc.Writers.Custom
-import Text.Pandoc.Writers.TEI
 import Text.Pandoc.Templates
 import Text.Pandoc.Options
-import Text.Pandoc.Shared (safeRead, warn, mapLeft, pandocVersion)
+import Text.Pandoc.Shared (safeRead, warn, pandocVersion)
 import Text.Pandoc.MediaBag (MediaBag)
 import Text.Pandoc.Error
-import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.List (intercalate)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Text.Parsec
 import Text.Parsec.Error
-import qualified Text.Pandoc.UTF8 as UTF8
 
 parseFormatSpec :: String
                 -> Either ParseError (String, Set Extension -> Set Extension)
@@ -187,17 +133,6 @@ mkStringReaderWithWarnings r  = StringReader $ \o s ->
       mapM_ warn warnings
       return (Right doc)
 
-mkBSReader :: (ReaderOptions -> BL.ByteString -> Either PandocError (Pandoc, MediaBag)) -> Reader
-mkBSReader r = ByteStringReader (\o s -> return $ r o s)
-
-mkBSReaderWithWarnings :: (ReaderOptions -> BL.ByteString -> Either PandocError (Pandoc, MediaBag, [String])) -> Reader
-mkBSReaderWithWarnings r = ByteStringReader $ \o s ->
-  case r o s of
-    Left err -> return $ Left err
-    Right (doc, mediaBag, warnings) -> do
-      mapM_ warn warnings
-      return $ Right (doc, mediaBag)
-
 -- | Association list of formats and readers.
 readers :: [(String, Reader)]
 readers = [ ("markdown"     , mkStringReaderWithWarnings readMarkdownWithWarnings)
@@ -215,58 +150,9 @@ data Writer = PureStringWriter   (WriterOptions -> Pandoc -> String)
 -- | Association list of formats and writers.
 writers :: [ ( String, Writer ) ]
 writers = [
-   ("native"       , PureStringWriter writeNative)
-  ,("json"         , PureStringWriter writeJSON)
-  ,("odt"          , IOByteStringWriter writeODT)
-  ,("epub"         , IOByteStringWriter $ \o ->
-                      writeEPUB o{ writerEpubVersion = Just EPUB2 })
-  ,("epub3"        , IOByteStringWriter $ \o ->
-                       writeEPUB o{ writerEpubVersion = Just EPUB3 })
-  ,("fb2"          , IOStringWriter writeFB2)
-  ,("html"         , PureStringWriter writeHtmlString)
+   ("html"         , PureStringWriter writeHtmlString)
   ,("html5"        , PureStringWriter $ \o ->
      writeHtmlString o{ writerHtml5 = True })
-  ,("icml"         , IOStringWriter writeICML)
-  ,("s5"           , PureStringWriter $ \o ->
-     writeHtmlString o{ writerSlideVariant = S5Slides
-                      , writerTableOfContents = False })
-  ,("slidy"        , PureStringWriter $ \o ->
-     writeHtmlString o{ writerSlideVariant = SlidySlides })
-  ,("slideous"     , PureStringWriter $ \o ->
-     writeHtmlString o{ writerSlideVariant = SlideousSlides })
-  ,("dzslides"     , PureStringWriter $ \o ->
-     writeHtmlString o{ writerSlideVariant = DZSlides
-                      , writerHtml5 = True })
-  ,("revealjs"      , PureStringWriter $ \o ->
-     writeHtmlString o{ writerSlideVariant = RevealJsSlides
-                      , writerHtml5 = True })
-  ,("docbook"      , PureStringWriter writeDocbook)
-  ,("docbook5"     , PureStringWriter $ \o ->
-     writeDocbook o{ writerDocbook5 = True })
-  ,("opml"         , PureStringWriter writeOPML)
-  ,("opendocument" , PureStringWriter writeOpenDocument)
-  ,("latex"        , PureStringWriter writeLaTeX)
-  ,("beamer"       , PureStringWriter $ \o ->
-     writeLaTeX o{ writerBeamer = True })
-  ,("context"      , PureStringWriter writeConTeXt)
-  ,("texinfo"      , PureStringWriter writeTexinfo)
-  ,("man"          , PureStringWriter writeMan)
-  ,("markdown"     , PureStringWriter writeMarkdown)
-  ,("markdown_strict" , PureStringWriter writeMarkdown)
-  ,("markdown_phpextra" , PureStringWriter writeMarkdown)
-  ,("markdown_github" , PureStringWriter writeMarkdown)
-  ,("markdown_mmd" , PureStringWriter writeMarkdown)
-  ,("plain"        , PureStringWriter writePlain)
-  ,("rst"          , PureStringWriter writeRST)
-  ,("mediawiki"    , PureStringWriter writeMediaWiki)
-  ,("dokuwiki"     , PureStringWriter writeDokuWiki)
-  ,("textile"      , PureStringWriter writeTextile)
-  ,("rtf"          , IOStringWriter writeRTFWithEmbeddedImages)
-  ,("org"          , PureStringWriter writeOrg)
-  ,("asciidoc"     , PureStringWriter writeAsciiDoc)
-  ,("haddock"      , PureStringWriter writeHaddock)
-  ,("commonmark"   , PureStringWriter writeCommonMark)
-  ,("tei"          , PureStringWriter writeTEI)
   ]
 
 getDefaultExtensions :: String -> Set Extension
@@ -321,15 +207,3 @@ getWriter s
                      Just (IOByteStringWriter r) -> Right $ IOByteStringWriter $
                              \o -> r o{ writerExtensions = setExts $
                                               getDefaultExtensions writerName }
-
-{-# DEPRECATED toJsonFilter "Use 'toJSONFilter' from 'Text.Pandoc.JSON' instead" #-}
--- | Deprecated.  Use @toJSONFilter@ from @Text.Pandoc.JSON@ instead.
-class ToJSONFilter a => ToJsonFilter a
-  where toJsonFilter :: a -> IO ()
-        toJsonFilter = toJSONFilter
-
-readJSON :: ReaderOptions -> String -> Either PandocError Pandoc
-readJSON _ = mapLeft ParseFailure . eitherDecode' . UTF8.fromStringLazy
-
-writeJSON :: WriterOptions -> Pandoc -> String
-writeJSON _ = UTF8.toStringLazy . encode

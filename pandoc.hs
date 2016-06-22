@@ -49,7 +49,7 @@ import System.Exit ( ExitCode (..), exitSuccess )
 import System.FilePath
 import System.Console.GetOpt
 import Data.Char ( toLower, toUpper )
-import Data.List ( delete, intercalate, isPrefixOf, isSuffixOf, sort )
+import Data.List ( delete, intercalate, isPrefixOf, sort )
 import System.Directory ( getAppUserDataDirectory, findExecutable,
                           doesFileExist, Permissions(..), getPermissions )
 import System.IO ( stdout, stderr )
@@ -1182,19 +1182,16 @@ convertWithOpts opts args = do
   let laTeXInput = "latex" `isPrefixOf` readerName' ||
                     "beamer" `isPrefixOf` readerName'
 
-  writer <- if ".lua" `isSuffixOf` format
-               -- note:  use non-lowercased version writerName
-               then return $ IOStringWriter $ writeCustom writerName
-               else case getWriter writerName' of
-                         Left e  -> err 9 $
-                           if format == "pdf"
-                              then e ++
-                               "\nTo create a pdf with pandoc, use " ++
-                               "the latex or beamer writer and specify\n" ++
-                               "an output file with .pdf extension " ++
-                               "(pandoc -t latex -o filename.pdf)."
-                              else e
-                         Right w -> return w
+  writer <- case getWriter writerName' of
+                 Left e  -> err 9 $
+                   if format == "pdf"
+                      then e ++
+                       "\nTo create a pdf with pandoc, use " ++
+                       "the latex or beamer writer and specify\n" ++
+                       "an output file with .pdf extension " ++
+                       "(pandoc -t latex -o filename.pdf)."
+                      else e
+                 Right w -> return w
 
   reader <- case getReader readerName' of
                 Right r  -> return r
