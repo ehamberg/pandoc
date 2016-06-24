@@ -99,7 +99,6 @@ import Data.Version ( showVersion )
 import qualified Data.Map as M
 import Network.URI ( escapeURIString, parseURIReference, URI(..) )
 import qualified Data.Set as Set
-import Data.Generics (Typeable, Data)
 import qualified Control.Monad.State as S
 import Control.Monad (msum, unless, MonadPlus(..))
 import Text.Pandoc.Pretty (charWidth)
@@ -579,7 +578,7 @@ isPara _        = False
 data Element = Blk Block
              | Sec Int [Int] Attr [Inline] [Element]
              --    lvl  num attributes label    contents
-             deriving (Eq, Read, Show, Typeable, Data)
+             deriving (Eq, Read, Show)
 
 instance Walkable Inline Element where
   walk f (Blk x) = Blk (walk f x)
