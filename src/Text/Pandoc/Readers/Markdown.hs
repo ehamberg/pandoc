@@ -42,10 +42,8 @@ import Text.Pandoc.Emoji (emojis)
 import Text.Pandoc.Generic (bottomUp)
 import qualified Data.Text as T
 import Data.Text (Text)
-import qualified Data.HashMap.Strict as H
 import qualified Text.Pandoc.Builder as B
 import qualified Text.Pandoc.UTF8 as UTF8
-import qualified Data.Vector as V
 import Text.Pandoc.Builder (Inlines, Blocks, trimInlines)
 import Text.Pandoc.Options
 import Text.Pandoc.Shared
