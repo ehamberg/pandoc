@@ -34,7 +34,6 @@ module Text.Pandoc.Readers.Markdown ( readMarkdown,
 
 import Data.List ( transpose, sortBy, findIndex, intersperse, intercalate )
 import qualified Data.Map as M
-import Data.Scientific (coefficient, base10Exponent)
 import Data.Ord ( comparing )
 import Data.Char ( isSpace, isAlphaNum, toLower, isPunctuation )
 import Data.Maybe
