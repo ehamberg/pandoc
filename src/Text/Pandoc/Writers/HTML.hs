@@ -39,7 +39,6 @@ import Text.Pandoc.Readers.TeXMath
 import Text.Pandoc.Slides
 import Text.Pandoc.XML (fromEntities)
 import Network.URI ( parseURIReference, URI(..), unEscapeString )
-import Network.HTTP ( urlEncode )
 import Numeric ( showHex )
 import Data.Char ( ord, toLower )
 import Data.List ( isPrefixOf, intersperse )
@@ -684,16 +683,6 @@ inlineToHtml opts inline =
               return $ case t of
                        InlineMath -> H.span ! A.class_ mathClass $ m
                        DisplayMath -> H.div ! A.class_ mathClass $ m
-           WebTeX url -> do
-              let imtag = if writerHtml5 opts then H5.img else H.img
-              let m = imtag ! A.style "vertical-align:middle"
-                            ! A.src (toValue $ url ++ urlEncode str)
-                            ! A.alt (toValue str)
-                            ! A.title (toValue str)
-              let brtag = if writerHtml5 opts then H5.br else H.br
-              return $ case t of
-                        InlineMath  -> m
-                        DisplayMath -> brtag >> m >> brtag
            GladTeX ->
               return $ case t of
                          InlineMath -> preEscapedString $ "<EQ ENV=\"math\">" ++ str ++ "</EQ>"
