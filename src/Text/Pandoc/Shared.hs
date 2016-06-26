@@ -75,8 +75,6 @@ module Text.Pandoc.Shared (
                      -- * TagSoup HTML handling
                      renderTags',
                      -- * Error handling
-                     err,
-                     warn,
                      mapLeft,
                      hush,
                      -- * Safe read
@@ -89,9 +87,6 @@ import Text.Pandoc.Definition
 import Text.Pandoc.Walk
 import Text.Pandoc.Builder (Inlines, Blocks, ToMetaValue(..))
 import qualified Text.Pandoc.Builder as B
-import qualified Text.Pandoc.UTF8 as UTF8
-import System.Environment (getProgName)
-import System.Exit (exitWith, ExitCode(..))
 import Data.Char ( toLower, isLower, isUpper, isAlpha,
                    isLetter, isDigit, isSpace )
 import Data.List ( find, stripPrefix, intercalate )
@@ -103,7 +98,6 @@ import qualified Control.Monad.State as S
 import Control.Monad (msum, unless, MonadPlus(..))
 import Text.Pandoc.Pretty (charWidth)
 import Text.Pandoc.Compat.Time
-import System.IO (stderr)
 import Text.HTML.TagSoup (renderTagsOptions, RenderOptions(..), Tag(..),
          renderOptions)
 import Text.Pandoc.Compat.Monoid ((<>))
@@ -716,18 +710,6 @@ renderTags' = renderTagsOptions
 --
 -- Error reporting
 --
-
-err :: Int -> String -> IO a
-err exitCode msg = do
-  name <- getProgName
-  UTF8.hPutStrLn stderr $ name ++ ": " ++ msg
-  exitWith $ ExitFailure exitCode
-  return undefined
-
-warn :: String -> IO ()
-warn msg = do
-  name <- getProgName
-  UTF8.hPutStrLn stderr $ name ++ ": " ++ msg
 
 mapLeft :: (a -> b) -> Either a c -> Either b c
 mapLeft f (Left x) = Left (f x)

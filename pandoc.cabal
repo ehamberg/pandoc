@@ -164,7 +164,6 @@ Library
                  array >= 0.3 && < 0.6,
                  parsec >= 3.1 && < 3.2,
                  mtl >= 1.1 && < 2.3,
-                 bytestring >= 0.9 && < 0.11,
                  text >= 0.11 && < 1.3,
                  texmath >= 0.8.6.2 && < 0.9,
                  pandoc-types >= 1.16 && < 1.17,
@@ -199,7 +198,6 @@ Library
                    Text.Pandoc.Readers.Markdown,
                    Text.Pandoc.Readers.TeXMath,
                    Text.Pandoc.Writers.HTML,
-                   Text.Pandoc.UTF8,
                    Text.Pandoc.CSS
   Other-Modules:   Text.Pandoc.Asciify,
                    Text.Pandoc.Emoji,

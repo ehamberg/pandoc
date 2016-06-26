@@ -31,7 +31,6 @@ writers.
 -}
 module Main where
 import Text.Pandoc
-import qualified Text.Pandoc.UTF8 as UTF8
 
 main :: IO ()
 main = do
@@ -39,8 +38,8 @@ main = do
                        , readerStandalone = True
                        }
 
-  s <- UTF8.getContents
+  s <- getContents
   let Right doc = readMarkdown readerOpts s
 
   let writerOptions = def { writerHtml5 = True }
-  UTF8.putStr (writeHtmlString writerOptions doc)
+  putStr (writeHtmlString writerOptions doc)
