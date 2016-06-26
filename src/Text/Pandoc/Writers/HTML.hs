@@ -34,14 +34,13 @@ import Text.Pandoc.Definition
 import Text.Pandoc.Compat.Monoid ((<>))
 import Text.Pandoc.Shared
 import Text.Pandoc.Options
-import Text.Pandoc.Slides
 import Text.Pandoc.XML (fromEntities)
 import Network.URI ( unEscapeString )
 import Numeric ( showHex )
 import Data.Char ( ord, toLower )
 import Data.List ( isPrefixOf, intersperse )
 import Data.String ( fromString )
-import Data.Maybe ( fromMaybe, isJust )
+import Data.Maybe ( isJust )
 import Control.Monad.State
 import Text.Blaze.Html hiding(contents)
 import qualified Text.Blaze.XHtml5 as H5
@@ -95,13 +94,9 @@ pandocToHtml :: WriterOptions
              -> Pandoc
              -> State WriterState Html
 pandocToHtml opts (Pandoc _ blocks) = do
-  let slideLevel = fromMaybe (getSlideLevel blocks) $ writerSlideLevel opts
-  let sects = hierarchicalize $
-              if writerSlideVariant opts == NoSlides
-                 then blocks
-                 else prepSlides slideLevel blocks
+  let sects = hierarchicalize $ blocks
   blocks' <- liftM (mconcat . intersperse (nl opts)) $
-                 mapM (elementToHtml slideLevel opts) sects
+                 mapM (elementToHtml opts) sects
   st <- get
   let notes = reverse (stNotes st)
   let thebody = blocks' >> footnoteSection opts notes
@@ -136,15 +131,15 @@ showSecNum :: [Int] -> String
 showSecNum = concat . intersperse "." . map show
 
 -- | Convert an Element to Html.
-elementToHtml :: Int -> WriterOptions -> Element -> State WriterState Html
-elementToHtml _slideLevel opts (Blk block) = blockToHtml opts block
-elementToHtml slideLevel opts (Sec level num (id',classes,keyvals) title' elements) = do
-  let slide = writerSlideVariant opts /= NoSlides && level <= slideLevel
+elementToHtml ::  WriterOptions -> Element -> State WriterState Html
+elementToHtml opts (Blk block) = blockToHtml opts block
+elementToHtml opts (Sec level num (id',classes,keyvals) title' elements) = do
+  let slide = False
   let num' = zipWith (+) num (writerNumberOffset opts ++ repeat 0)
   modify $ \st -> st{stSecNum = num'}  -- update section number
   -- always use level 1 for slide titles
   let level' = if slide then 1 else level
-  let titleSlide = slide && level < slideLevel
+  let titleSlide = False
   header' <- if title' == [Str "\0"]  -- marker for hrule
                 then return mempty
                 else do
@@ -164,7 +159,7 @@ elementToHtml slideLevel opts (Sec level num (id',classes,keyvals) title' elemen
   let inDiv xs = Blk (RawBlock (Format "html") ("<div class=\""
                        ++ fragmentClass ++ "\">")) :
                    (xs ++ [Blk (RawBlock (Format "html") "</div>")])
-  innerContents <- mapM (elementToHtml slideLevel opts)
+  innerContents <- mapM (elementToHtml opts)
                    $ if titleSlide
                         -- title slides have no content of their own
                         then filter isSec elements
