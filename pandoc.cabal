@@ -168,7 +168,6 @@ Library
                  texmath >= 0.8.6.2 && < 0.9,
                  pandoc-types >= 1.16 && < 1.17,
                  tagsoup >= 0.13.7 && < 0.14,
-                 base64-bytestring >= 0.1 && < 1.1,
                  data-default >= 0.4 && < 0.8,
                  blaze-html >= 0.5 && < 0.9,
                  blaze-markup >= 0.5.1 && < 0.8,
