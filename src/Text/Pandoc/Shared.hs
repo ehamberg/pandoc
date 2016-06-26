@@ -97,7 +97,7 @@ import Control.Monad (unless, MonadPlus(..))
 import Text.Pandoc.Pretty (charWidth)
 import Text.HTML.TagSoup (renderTagsOptions, RenderOptions(..), Tag(..),
          renderOptions)
-import Text.Pandoc.Compat.Monoid ((<>))
+import Data.Monoid ((<>))
 import Data.Sequence (ViewR(..), ViewL(..), viewl, viewr)
 import qualified Data.Text as T (toUpper, pack, unpack)
 import Paths_pandoc (version)

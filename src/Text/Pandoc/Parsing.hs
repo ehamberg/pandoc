@@ -182,9 +182,9 @@ import Text.Pandoc.Shared
 import qualified Data.Map as M
 import Text.TeXMath.Readers.TeX.Macros (applyMacros, Macro,
                                         parseMacroDefinitions)
-import Text.Pandoc.Compat.TagSoupEntity ( lookupEntity )
+import Text.HTML.TagSoup.Entity ( lookupEntity )
 import Text.Pandoc.Asciify (toAsciiChar)
-import Text.Pandoc.Compat.Monoid ((<>))
+import Data.Monoid ((<>))
 import Data.Default
 import qualified Data.Set as Set
 import Control.Monad.Reader
@@ -575,9 +575,14 @@ characterReference = try $ do
                   '#':'X':xs -> '#':'x':xs  -- workaround tagsoup bug
                   '#':_  -> ent
                   _      -> ent ++ ";"
-  case lookupEntity ent' of
+  case lookupEntity' ent' of
        Just c  -> return c
        Nothing -> fail "entity not found"
+    where lookupEntity' = str2chr . lookupEntity
+            where str2chr :: Maybe String -> Maybe Char
+                  str2chr (Just [c]) = Just c
+                  str2chr _ = Nothing
+
 
 -- | Parses an uppercase roman numeral and returns (UpperRoman, number).
 upperRoman :: Stream s m Char => ParserT s st m (ListNumberStyle, Int)

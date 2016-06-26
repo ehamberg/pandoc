@@ -191,11 +191,7 @@ Library
                    Text.Pandoc.Writers.HTML,
                    Text.Pandoc.CSS
   Other-Modules:   Text.Pandoc.Asciify,
-                   Text.Pandoc.Parsing,
-                   Text.Pandoc.Compat.Except,
-                   Text.Pandoc.Compat.TagSoupEntity,
-                   Text.Pandoc.Compat.Monoid,
-                   Paths_pandoc
+                   Text.Pandoc.Parsing
 
   Buildable:       True
 

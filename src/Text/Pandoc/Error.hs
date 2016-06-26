@@ -33,7 +33,6 @@ module Text.Pandoc.Error (PandocError(..), handleError) where
 
 import Text.Parsec.Error
 import Text.Parsec.Pos hiding (Line)
-import Text.Pandoc.Compat.Except
 import Control.Exception (Exception)
 
 type Input = String
@@ -45,6 +44,13 @@ data PandocError = -- | Generic parse failure
                  deriving (Show)
 
 instance Exception PandocError
+
+class Error a where
+  noMsg  :: a
+  strMsg :: String -> a
+
+  noMsg    = strMsg ""
+  strMsg _ = noMsg
 
 instance Error PandocError where
   strMsg = ParseFailure
