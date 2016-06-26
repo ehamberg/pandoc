@@ -289,13 +289,6 @@ instance Default ReaderOptions
 data EPUBVersion = EPUB2 | EPUB3 deriving (Eq, Show, Read, Data, Typeable, Generic)
 
 data HTMLMathMethod = PlainMath
-                    | LaTeXMathML (Maybe String)  -- url of LaTeXMathML.js
-                    | JsMath (Maybe String)       -- url of jsMath load script
-                    | GladTeX
-                    | WebTeX String               -- url of TeX->image script.
-                    | MathML (Maybe String)       -- url of MathMLinHTML.js
-                    | MathJax String              -- url of MathJax.js
-                    | KaTeX String String -- url of stylesheet and katex.js
                     deriving (Show, Read, Eq, Data, Typeable, Generic)
 
 data CiteMethod = Citeproc                        -- use citeproc to render them

@@ -97,7 +97,7 @@ import Data.Char ( toLower, isLower, isUpper, isAlpha,
 import Data.List ( find, stripPrefix, intercalate )
 import Data.Version ( showVersion )
 import qualified Data.Map as M
-import Network.URI ( escapeURIString, parseURIReference, URI(..) )
+import Network.URI ( escapeURIString )
 import qualified Data.Set as Set
 import qualified Control.Monad.State as S
 import Control.Monad (msum, unless, MonadPlus(..))
@@ -713,22 +713,6 @@ renderTags' = renderTagsOptions
                                                        "meta", "link"]
                             , optRawTag   = matchTags ["script", "style"] }
               where matchTags = \tags -> flip elem tags . map toLower
-
---
--- File handling
---
-
--- | Specialized version of parseURIReference that disallows
--- single-letter schemes.  Reason:  these are usually windows absolute
--- paths.
-parseURIReference' :: String -> Maybe URI
-parseURIReference' s =
-  case parseURIReference s of
-       Just u
-         | length (uriScheme u) > 2  -> Just u
-         | null (uriScheme u)        -> Just u  -- protocol-relative
-       _                             -> Nothing
-
 --
 -- Error reporting
 --

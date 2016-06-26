@@ -40,10 +40,7 @@ import Data.Maybe
 import Text.Pandoc.Definition
 import Text.Pandoc.Emoji (emojis)
 import Text.Pandoc.Generic (bottomUp)
-import qualified Data.Text as T
-import Data.Text (Text)
 import qualified Text.Pandoc.Builder as B
-import qualified Text.Pandoc.UTF8 as UTF8
 import Text.Pandoc.Builder (Inlines, Blocks, trimInlines)
 import Text.Pandoc.Options
 import Text.Pandoc.Shared
@@ -232,29 +229,6 @@ pandocTitleBlock = try $ do
                    . (if B.isNull date' then id else B.setMeta "date" date')
                    $ nullMeta
   updateState $ \st -> st{ stateMeta' = stateMeta' st <> meta' }
-
--- ignore fields ending with _
-ignorable :: Text -> Bool
-ignorable t = (T.pack "_") `T.isSuffixOf` t
-
-toMetaValue :: ReaderOptions -> Text -> Either PandocError MetaValue
-toMetaValue opts x = toMeta <$> readMarkdown opts' (T.unpack x)
-  where
-    toMeta p =
-      case p of
-        Pandoc _ [Plain xs]  -> MetaInlines xs
-        Pandoc _ [Para xs]
-         | endsWithNewline x -> MetaBlocks [Para xs]
-         | otherwise         -> MetaInlines xs
-        Pandoc _ bs           -> MetaBlocks bs
-    endsWithNewline t = T.pack "\n" `T.isSuffixOf` t
-    opts' = opts{readerExtensions=readerExtensions opts `Set.difference` meta_exts}
-    meta_exts = Set.fromList [ Ext_pandoc_title_block
-                             , Ext_mmd_title_block
-                             ]
-
-stopLine :: MarkdownParser ()
-stopLine = try $ (string "---" <|> string "...") >> blankline >> return ()
 
 mmdTitleBlock :: MarkdownParser ()
 mmdTitleBlock = try $ do
