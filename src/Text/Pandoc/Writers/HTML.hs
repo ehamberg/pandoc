@@ -34,7 +34,6 @@ import Text.Pandoc.Definition
 import Text.Pandoc.Compat.Monoid ((<>))
 import Text.Pandoc.Shared
 import Text.Pandoc.Options
-import Text.Pandoc.ImageSize
 import Text.Pandoc.Slides
 import Text.Pandoc.XML (fromEntities)
 import Network.URI ( unEscapeString )
@@ -275,23 +274,13 @@ attrsToHtml opts (id',classes',keyvals) =
 
 imgAttrsToHtml :: WriterOptions -> Attr -> [Attribute]
 imgAttrsToHtml opts attr =
-    attrsToHtml opts (ident,cls,kvs') ++
-    toAttrs (dimensionsToAttrList opts attr)
+    attrsToHtml opts (ident,cls,kvs')
   where
     (ident,cls,kvs) = attr
     kvs' = filter isNotDim kvs
     isNotDim ("width", _)  = False
     isNotDim ("height", _) = False
     isNotDim _ = True
-
-dimensionsToAttrList :: WriterOptions -> Attr -> [(String, String)]
-dimensionsToAttrList opts attr = (go Width) ++ (go Height)
-  where
-    go dir = case (dimension dir attr) of
-               (Just (Percent a)) -> [("style", show dir ++ ":" ++ show (Percent a))]
-               (Just dim)         -> [(show dir, showInPixel opts dim)]
-               _ -> []
-
 
 -- | Convert Pandoc block element to HTML.
 blockToHtml :: WriterOptions -> Block -> State WriterState Html

@@ -206,7 +206,6 @@ Library
   Other-Modules:   Text.Pandoc.Asciify,
                    Text.Pandoc.Emoji,
                    Text.Pandoc.Parsing,
-                   Text.Pandoc.ImageSize,
                    Text.Pandoc.Slides,
                    Text.Pandoc.Compat.Time,
                    Text.Pandoc.Compat.Except,
