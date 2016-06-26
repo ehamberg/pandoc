@@ -205,6 +205,7 @@ Library
 
 Executable pandoc
   Build-Depends: pandoc,
+                 ghcjs-base,
                  base >= 4.2 && <5
   Ghc-Options:   -rtsopts -with-rtsopts=-K16m -Wall -fno-warn-unused-do-bind
   Ghc-Prof-Options: -fprof-auto-exported -rtsopts -with-rtsopts=-K16m

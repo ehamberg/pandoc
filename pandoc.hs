@@ -1,4 +1,6 @@
-{-# LANGUAGE CPP, TupleSections, ScopedTypeVariables #-}
+{-# Language ForeignFunctionInterface #-}
+{-# Language OverloadedStrings #-}
+
 {-
 Copyright (C) 2006-2016 John MacFarlane <jgm@berkeley.edu>
 
@@ -25,21 +27,40 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
    Maintainer  : John MacFarlane <jgm@berkeley@edu>
    Stability   : alpha
    Portability : portable
-
-Parses command-line options and calls the appropriate readers and
-writers.
 -}
 module Main where
+
 import Text.Pandoc
 
-main :: IO ()
-main = do
-  let readerOpts = def { readerSmart = True
-                       , readerStandalone = True
-                       }
+import GHCJS.Marshal
+import GHCJS.Foreign.Callback
+import JavaScript.Object
+import JavaScript.Object.Internal (Object(..))
 
-  s <- getContents
+convert :: String -> String
+convert s = do
+  let readerOpts = def { readerSmart = True }
+
   let Right doc = readMarkdown readerOpts s
 
   let writerOptions = def { writerHtml5 = True }
-  putStr (writeHtmlString writerOptions doc)
+  writeHtmlString writerOptions doc
+
+foreign import javascript unsafe "convert_ = $1"
+    js_set_convert :: Callback a -> IO ()
+
+main :: IO ()
+main = do
+    putStrLn "Haskell convert core starting..."
+
+    callback <- syncCallback1 ThrowWouldBlock $ \jsval -> do
+        let o = Object jsval
+        getProp "in" o
+          >>= fromJSValUnchecked
+          >>= pure . convert
+          >>= toJSVal
+          >>= \v -> setProp "out" v o
+
+    js_set_convert callback
+
+    putStr "Haskell convert callback initialized."
