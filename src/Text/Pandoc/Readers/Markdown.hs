@@ -38,7 +38,6 @@ import Data.Ord ( comparing )
 import Data.Char ( isSpace, isAlphaNum, toLower, isPunctuation )
 import Data.Maybe
 import Text.Pandoc.Definition
-import Text.Pandoc.Emoji (emojis)
 import Text.Pandoc.Generic (bottomUp)
 import qualified Text.Pandoc.Builder as B
 import Text.Pandoc.Builder (Inlines, Blocks, trimInlines)
@@ -1395,7 +1394,6 @@ inline = choice [ whitespace
                 , exampleRef
                 , smart
                 , return . B.singleton <$> charRef
-                , emoji
                 , symbol
                 , ltSign
                 ] <?> "inline"
@@ -1825,21 +1823,6 @@ rawHtmlInline = do
                                          not (isCloseBlockTag x))
                              else not . isTextTag
   return $ return $ B.rawInline "html" result
-
--- Emoji
-
-emojiChars :: [Char]
-emojiChars = ['a'..'z'] ++ ['0'..'9'] ++ ['_','+','-']
-
-emoji :: MarkdownParser (F Inlines)
-emoji = try $ do
-  guardEnabled Ext_emoji
-  char ':'
-  emojikey <- many1 (oneOf emojiChars)
-  char ':'
-  case M.lookup emojikey emojis of
-       Just s  -> return (return (B.str s))
-       Nothing -> mzero
 
 -- Citations
 
