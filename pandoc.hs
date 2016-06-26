@@ -35,17 +35,12 @@ import qualified Text.Pandoc.UTF8 as UTF8
 
 main :: IO ()
 main = do
-  let Right writer = getWriter "html"
-  let Right reader = getReader "markdown"
-
   let readerOpts = def { readerSmart = True
                        , readerStandalone = True
                        }
 
-  let StringReader r = reader
-  Right doc <- r readerOpts =<< UTF8.getContents
+  s <- UTF8.getContents
+  let Right doc = readMarkdown readerOpts s
 
   let writerOptions = def { writerHtml5 = True }
-
-  let PureStringWriter w = writer
-  UTF8.putStr (w writerOptions doc)
+  UTF8.putStr (writeHtmlString writerOptions doc)
