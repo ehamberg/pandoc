@@ -34,11 +34,8 @@ import Text.Pandoc.Definition
 import Text.Pandoc.Compat.Monoid ((<>))
 import Text.Pandoc.Shared
 import Text.Pandoc.Options
-import Text.Pandoc.XML (fromEntities)
 import Network.URI ( unEscapeString )
-import Numeric ( showHex )
-import Data.Char ( ord, toLower )
-import Data.List ( isPrefixOf, intersperse )
+import Data.List ( intersperse )
 import Data.String ( fromString )
 import Data.Maybe ( isJust )
 import Control.Monad.State
@@ -203,59 +200,6 @@ footnoteSection opts notes =
                                else H.div ! A.class_ "footnotes" $ x
          hrtag = if writerHtml5 opts then H5.hr else H.hr
 
--- | Parse a mailto link; return Just (name, domain) or Nothing.
-parseMailto :: String -> Maybe (String, String)
-parseMailto s = do
-  case break (==':') s of
-       (xs,':':addr) | map toLower xs == "mailto" -> do
-         let (name', rest) = span (/='@') addr
-         let domain = drop 1 rest
-         return (name', domain)
-       _ -> fail "not a mailto: URL"
-
--- | Obfuscate a "mailto:" link.
-obfuscateLink :: WriterOptions -> Attr -> Html -> String -> Html
-obfuscateLink opts attr txt s | writerEmailObfuscation opts == NoObfuscation =
-  addAttrs opts attr $ H.a ! A.href (toValue s) $ txt
-obfuscateLink opts attr (renderHtml -> txt) s =
-  let meth = writerEmailObfuscation opts
-      s' = map toLower (take 7 s) ++ drop 7 s
-  in  case parseMailto s' of
-        (Just (name', domain)) ->
-          let domain'  = substitute "." " dot " domain
-              at'      = obfuscateChar '@'
-              (linkText, altText) =
-                 if txt == drop 7 s' -- autolink
-                    then ("e", name' ++ " at " ++ domain')
-                    else ("'" ++ obfuscateString txt ++ "'",
-                          txt ++ " (" ++ name' ++ " at " ++ domain' ++ ")")
-          in  case meth of
-                ReferenceObfuscation ->
-                     -- need to use preEscapedString or &'s are escaped to &amp; in URL
-                     preEscapedString $ "<a href=\"" ++ (obfuscateString s')
-                     ++ "\" class=\"email\">" ++ (obfuscateString txt) ++ "</a>"
-                JavascriptObfuscation ->
-                     (H.script ! A.type_ "text/javascript" $
-                     preEscapedString ("\n<!--\nh='" ++
-                     obfuscateString domain ++ "';a='" ++ at' ++ "';n='" ++
-                     obfuscateString name' ++ "';e=n+a+h;\n" ++
-                     "document.write('<a h'+'ref'+'=\"ma'+'ilto'+':'+e+'\" clas'+'s=\"em' + 'ail\">'+" ++
-                     linkText  ++ "+'<\\/'+'a'+'>');\n// -->\n")) >>
-                     H.noscript (preEscapedString $ obfuscateString altText)
-                _ -> error $ "Unknown obfuscation method: " ++ show meth
-        _ -> addAttrs opts attr $ H.a ! A.href (toValue s) $ toHtml txt  -- malformed email
-
--- | Obfuscate character as entity.
-obfuscateChar :: Char -> String
-obfuscateChar char =
-  let num    = ord char
-      numstr = if even num then show num else "x" ++ showHex num ""
-  in  "&#" ++ numstr ++ ";"
-
--- | Obfuscate string using entities.
-obfuscateString :: String -> String
-obfuscateString = concatMap obfuscateChar . fromEntities
-
 addAttrs :: WriterOptions -> Attr -> Html -> Html
 addAttrs opts attr h = foldl (!) h (attrsToHtml opts attr)
 
@@ -320,15 +264,8 @@ blockToHtml _ (RawBlock f str)
   | f == Format "html" = return $ preEscapedString str
   | otherwise          = return mempty
 blockToHtml opts (HorizontalRule) = return $ if writerHtml5 opts then H5.hr else H.hr
-blockToHtml opts (CodeBlock (id',classes,keyvals) rawCode) = do
-  let tolhs = isEnabled Ext_literate_haskell opts &&
-                any (\c -> map toLower c == "haskell") classes &&
-                any (\c -> map toLower c == "literate") classes
-      adjCode  = if tolhs
-                    then unlines . map ("> " ++) . lines $ rawCode
-                    else rawCode
-  return $ addAttrs opts (id',classes,keyvals)
-                           $ H.pre $ H.code $ toHtml adjCode
+blockToHtml opts (CodeBlock (id',classes,keyvals) rawCode) =
+  return $ addAttrs opts (id',classes,keyvals) $ H.pre $ H.code $ toHtml rawCode
 blockToHtml opts (BlockQuote blocks) =
   -- in S5, treat list in blockquote specially
   -- if default is incremental, make it nonincremental;
@@ -566,9 +503,6 @@ inlineToHtml opts inline =
     (RawInline f str)
       | f == Format "html" -> return $ preEscapedString str
       | otherwise          -> return mempty
-    (Link attr txt (s,_)) | "mailto:" `isPrefixOf` s -> do
-                        linkText <- inlineListToHtml opts txt
-                        return $ obfuscateLink opts attr linkText s
     (Link attr txt (s,tit)) -> do
                         linkText <- inlineListToHtml opts txt
                         let s' = case s of
