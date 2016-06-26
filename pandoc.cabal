@@ -167,7 +167,6 @@ Library
                  bytestring >= 0.9 && < 0.11,
                  text >= 0.11 && < 1.3,
                  texmath >= 0.8.6.2 && < 0.9,
-                 xml >= 1.3.12 && < 1.4,
                  pandoc-types >= 1.16 && < 1.17,
                  tagsoup >= 0.13.7 && < 0.14,
                  base64-bytestring >= 0.1 && < 1.1,
@@ -201,7 +200,6 @@ Library
                    Text.Pandoc.Readers.TeXMath,
                    Text.Pandoc.Writers.HTML,
                    Text.Pandoc.UTF8,
-                   Text.Pandoc.XML,
                    Text.Pandoc.CSS
   Other-Modules:   Text.Pandoc.Asciify,
                    Text.Pandoc.Emoji,

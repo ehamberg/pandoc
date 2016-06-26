@@ -173,7 +173,6 @@ import Text.Pandoc.Definition
 import Text.Pandoc.Options
 import Text.Pandoc.Builder (Blocks, Inlines, rawBlock, HasMeta(..))
 import qualified Text.Pandoc.Builder as B
-import Text.Pandoc.XML (fromEntities)
 import qualified Text.Pandoc.UTF8 as UTF8 (putStrLn)
 import Text.Parsec hiding (token)
 import Text.Parsec.Pos (newPos)
@@ -399,7 +398,7 @@ romanNumeral upperCase = do
 -- escaped mailto: URI.
 emailAddress :: Stream s m Char => ParserT s st m (String, String)
 emailAddress = try $ toResult <$> mailbox <*> (char '@' *> domain)
- where toResult mbox dom = let full = fromEntities $ mbox ++ '@':dom
+ where toResult mbox dom = let full = mbox ++ '@':dom
                            in  (full, escapeURI $ "mailto:" ++ full)
        mailbox           = intercalate "." <$> (emailWord `sepby1` dot)
        domain            = intercalate "." <$> (subdomain `sepby1` dot)
@@ -470,7 +469,7 @@ uri = try $ do
                                          <|> enclosed (char '[') (char ']') uriChunk)
                                          <|> uriChunk))
   str' <- option str $ char '/' >> return (str ++ "/")
-  let uri' = scheme ++ ":" ++ fromEntities str'
+  let uri' = scheme ++ ":" ++ str'
   return (uri', escapeURI uri')
 
 mathInlineWith :: Stream s m Char  => String -> String -> ParserT s st m String

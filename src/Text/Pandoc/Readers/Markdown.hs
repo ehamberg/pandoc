@@ -45,7 +45,6 @@ import Text.Pandoc.Builder (Inlines, Blocks, trimInlines)
 import Text.Pandoc.Options
 import Text.Pandoc.Shared
 import Text.Pandoc.Pretty (charWidth)
-import Text.Pandoc.XML (fromEntities)
 import Text.Pandoc.Parsing hiding (tableWith)
 import Text.Pandoc.Readers.LaTeX ( rawLaTeXInline, rawLaTeXBlock )
 import Text.Pandoc.Readers.HTML ( htmlTag, htmlInBalanced, isInlineTag, isBlockTag,
@@ -1716,7 +1715,7 @@ autoLink = try $ do
   -- is finished, because the uri parser tries to avoid parsing
   -- final punctuation.  for example:  in `<http://hi---there>`,
   -- the URI parser will stop before the dashes.
-  extra <- fromEntities <$> manyTill nonspaceChar (char '>')
+  extra <- manyTill nonspaceChar (char '>')
   return $ return $ B.link (src ++ escapeURI extra) "" (B.str $ orig ++ extra)
 
 image :: MarkdownParser (F Inlines)
