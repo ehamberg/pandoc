@@ -1,17 +1,16 @@
-flags: {}
+resolver: lts-8.11
+compiler: ghcjs-0.2.1.9008011_ghc-8.0.2
 
-resolver: lts-6.4
-compiler: ghcjs-0.2.0.9006004_ghc-7.10.3
+allow-newer: true
 
 compiler-check: match-exact
 
 setup-info:
   ghcjs:
     source:
-      ghcjs-0.2.0.9006004_ghc-7.10.3:
-         url: "https://tolysz.org/ghcjs/lts-6.4-9006004.tar.gz"
-
-allow-newer: true
+      ghcjs-0.2.1.9008011_ghc-8.0.2:
+        url: https://github.com/matchwood/ghcjs-stack-dist/raw/master/ghcjs-0.2.1.9008011.tar.gz
+        sha1: a72a5181124baf64bcd0e68a8726e65914473b3b
 
 packages:
-- location: '.'
+  - '.'
